@@ -14,6 +14,11 @@
 set -euo pipefail
 cd "${0:A:h}/.."
 
+# Like build-app.sh: the macOS SDK's SwiftUI macros ship with Xcode, not with the Command Line Tools.
+if [[ -d /Applications/Xcode.app ]]; then
+  export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+fi
+
 usage() { echo "usage: scripts/release.sh <x.y.z> [--prerelease] [--dry-run] [--notes-file <file>]" >&2; exit 2; }
 VERSION=${1:-}
 [[ $VERSION =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]] || usage
