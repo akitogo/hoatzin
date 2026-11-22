@@ -1,0 +1,12 @@
+{"version":2,"items":[
+ {"id":"D0000000-0000-4000-8000-000000000001","kind":"folder","name":"Customers","children":[
+   {"id":"D0000000-0000-4000-8000-000000000002","kind":"ssh","name":"web01","children":[],"ssh":{"host":"10.20.30.11","port":22,"username":"deploy","auth":"key","identityFile":"","keychainHost":"","extraArgs":""}},
+   {"id":"D0000000-0000-4000-8000-000000000003","kind":"ssh","name":"web02","children":[],"ssh":{"host":"10.20.30.12","port":22,"username":"deploy","auth":"key","identityFile":"","keychainHost":"","extraArgs":""}},
+   {"id":"D0000000-0000-4000-8000-000000000004","kind":"ssh","name":"db01","children":[],"ssh":{"host":"10.20.30.13","port":22,"username":"deploy","auth":"key","identityFile":"","keychainHost":"","extraArgs":""}}]},
+ {"id":"D0000000-0000-4000-8000-000000000005","kind":"folder","name":"Infrastructure","children":[
+   {"id":"D0000000-0000-4000-8000-000000000006","kind":"ssh","name":"gateway","children":[],"ssh":{"host":"10.20.30.1","port":22,"username":"admin","auth":"password","identityFile":"","keychainHost":"","extraArgs":""}},
+   {"id":"D0000000-0000-4000-8000-000000000007","kind":"ssh","name":"backup","children":[],"ssh":{"host":"10.20.30.5","port":2222,"username":"backup","auth":"key","identityFile":"","keychainHost":"","extraArgs":""}}]},
+ {"id":"D0000000-0000-4000-8000-000000000010","kind":"proxmox","name":"Office","children":[],
+  "proxmox":{"host":"10.20.31.2","port":8006,"username":"root","realm":"pam","keychainHost":"",
+             "sshUsername":"deploy","sshAuth":"key","sshIdentityFile":"","guestOverrides":{}}}
+]}

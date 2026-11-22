@@ -118,6 +118,10 @@ final class AppModel {
         }
         self.init(library: LibraryStore(fileURL: libraryURL ?? LibraryStore.defaultURL))
         Self.shared = self
+        // Debug aid: HOATZIN_DEMO_PROXMOX=<file> fills Proxmox servers from a file (screenshots, demos).
+        if let demo = ProcessInfo.processInfo.environment["HOATZIN_DEMO_PROXMOX"] {
+            proxmox.loadDemo(from: URL(fileURLWithPath: demo))
+        }
     }
 
     /// `activityLogURL` defaults to HOATZIN_AI_LOG, then to ~/Library/Logs/Hoatzin for the

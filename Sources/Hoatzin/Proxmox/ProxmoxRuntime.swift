@@ -63,6 +63,42 @@ final class ProxmoxRuntime {
         states[serverID] ?? ServerState()
     }
 
+    // MARK: Demo data (debug aid)
+
+    /// Servers filled from a demo file (HOATZIN_DEMO_PROXMOX); they are never contacted.
+    @ObservationIgnored private var demoServers: Set<UUID> = []
+
+    private struct DemoServer: Decodable {
+        struct Node: Decodable { var name: String; var online: Bool; var ip: String? }
+        struct Guest: Decodable {
+            var vmid: Int, name: String, node: String, type: String, status: String
+            var template: Bool?, ips: [String]?
+        }
+        var nodes: [Node]
+        var guests: [Guest]
+        var loggedInAs: String?
+    }
+
+    /// Fills servers from a JSON file shaped `{"<server id>": {"nodes": […], "guests": […]}}`
+    /// instead of their API: for screenshots and demos without a Proxmox server.
+    func loadDemo(from url: URL) {
+        guard let data = try? Data(contentsOf: url),
+              let servers = try? JSONDecoder().decode([String: DemoServer].self, from: data)
+        else { return NSLog("Hoatzin: can't read demo Proxmox data at \(url.path)") }
+        for (key, demo) in servers {
+            guard let id = UUID(uuidString: key) else { continue }
+            demoServers.insert(id)
+            states[id] = ServerState(
+                nodes: demo.nodes.map { PVENodeInfo(name: $0.name, online: $0.online, ip: $0.ip) },
+                guests: demo.guests.map {
+                    PVEGuest(vmid: $0.vmid, name: $0.name, node: $0.node, type: GuestType(rawValue: $0.type) ?? .qemu,
+                             status: $0.status, isTemplate: $0.template ?? false, ips: $0.ips ?? [])
+                }.sorted { $0.vmid < $1.vmid },
+                lastRefresh: Date(), loggedInAs: demo.loggedInAs
+            )
+        }
+    }
+
     func guest(server: UUID, vmid: Int) -> PVEGuest? {
         states[server]?.guests.first { $0.vmid == vmid }
     }
@@ -196,7 +232,7 @@ final class ProxmoxRuntime {
     }
 
     func refresh(_ serverID: UUID) async {
-        guard library.item(serverID)?.proxmox != nil else { return }
+        guard library.item(serverID)?.proxmox != nil, !demoServers.contains(serverID) else { return }
         states[serverID, default: ServerState()].isLoading = true
         defer { states[serverID]?.isLoading = false }
 

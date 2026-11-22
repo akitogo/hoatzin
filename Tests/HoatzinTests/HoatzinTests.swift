@@ -599,6 +599,34 @@ final class RemoteCommandIntegrationTests: XCTestCase {
     }
 }
 
+/// The demo data behind the README screenshots (docs/demo, HOATZIN_DEMO_PROXMOX).
+@MainActor
+final class DemoDataTests: XCTestCase {
+    func testDemoFilesLoadWithoutAServer() async throws {
+        let docs = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("docs/demo")
+        let copy = FileManager.default.temporaryDirectory.appendingPathComponent("hoatzin-demo-\(UUID()).json")
+        try FileManager.default.copyItem(at: docs.appendingPathComponent("library.json"), to: copy)
+        let model = AppModel(library: LibraryStore(fileURL: copy))
+        defer {
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.removeItem(at: model.ai.activity.fileURL)
+        }
+        model.proxmox.loadDemo(from: docs.appendingPathComponent("proxmox.json"))
+        let office = try XCTUnwrap(model.library.proxmoxServers.first { $0.name == "Office" })
+        XCTAssertEqual(model.proxmox.state(office.id).nodes.map(\.name), ["pve1", "pve2"])
+        XCTAssertEqual(model.proxmox.state(office.id).guests.count, 9)
+        XCTAssertEqual(model.proxmox.guest(server: office.id, vmid: 101)?.ips, ["10.20.30.20"])
+        XCTAssertTrue(model.proxmox.guest(server: office.id, vmid: 9000)?.isTemplate ?? false)
+
+        // A refresh leaves demo servers alone: no login, no network.
+        await model.proxmox.refresh(office.id)
+        XCTAssertEqual(model.proxmox.state(office.id).guests.count, 9)
+        XCTAssertNil(model.prompts.current)
+        XCTAssertNil(model.proxmox.state(office.id).error)
+    }
+}
+
 final class LegacyMigrationTests: XCTestCase {
     func testCopiesRemoteDeckDataOnce() throws {
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("hoatzin-home-\(UUID())")

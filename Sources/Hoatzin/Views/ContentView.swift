@@ -72,16 +72,20 @@ struct ContentView: View {
             await IntentsSync.update(model)
         }
         .task {
-            // Debug aid: HOATZIN_AUTOCONNECT=<entry name> connects to that entry on launch.
-            guard let name = ProcessInfo.processInfo.environment["HOATZIN_AUTOCONNECT"] else { return }
-            func find(_ items: [LibraryItem]) -> LibraryItem? {
+            // Debug aids: HOATZIN_SELECT=<entry name> selects that entry on launch,
+            // HOATZIN_AUTOCONNECT=<entry name> connects to that SSH entry.
+            let environment = ProcessInfo.processInfo.environment
+            func find(_ name: String, in items: [LibraryItem], ssh: Bool) -> LibraryItem? {
                 for item in items {
-                    if item.kind == .ssh && item.name == name { return item }
-                    if let hit = find(item.children) { return hit }
+                    if item.name == name && (!ssh || item.kind == .ssh) { return item }
+                    if let hit = find(name, in: item.children, ssh: ssh) { return hit }
                 }
                 return nil
             }
-            if let item = find(model.library.items) {
+            if let name = environment["HOATZIN_SELECT"], let item = find(name, in: model.library.items, ssh: false) {
+                model.selection = .item(item.id)
+            }
+            if let name = environment["HOATZIN_AUTOCONNECT"], let item = find(name, in: model.library.items, ssh: true) {
                 model.selection = .item(item.id)
                 model.connect(.item(item.id))
             }

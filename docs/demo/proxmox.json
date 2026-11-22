@@ -1,0 +1,18 @@
+{"D0000000-0000-4000-8000-000000000010": {
+  "loggedInAs": "root@pam",
+  "nodes": [
+    {"name": "pve1", "online": true, "ip": "10.20.31.2"},
+    {"name": "pve2", "online": true, "ip": "10.20.31.3"}
+  ],
+  "guests": [
+    {"vmid": 101, "name": "nginx", "node": "pve1", "type": "lxc", "status": "running", "ips": ["10.20.30.20"]},
+    {"vmid": 102, "name": "mail", "node": "pve1", "type": "lxc", "status": "running", "ips": ["10.20.30.21"]},
+    {"vmid": 103, "name": "gitlab", "node": "pve1", "type": "qemu", "status": "running", "ips": ["10.20.30.22"]},
+    {"vmid": 104, "name": "grafana", "node": "pve1", "type": "lxc", "status": "running", "ips": ["10.20.30.23"]},
+    {"vmid": 9000, "name": "debian-template", "node": "pve1", "type": "qemu", "status": "stopped", "template": true},
+    {"vmid": 201, "name": "postgres", "node": "pve2", "type": "qemu", "status": "running", "ips": ["10.20.30.31"]},
+    {"vmid": 202, "name": "redis", "node": "pve2", "type": "lxc", "status": "running", "ips": ["10.20.30.32"]},
+    {"vmid": 203, "name": "staging", "node": "pve2", "type": "qemu", "status": "stopped"},
+    {"vmid": 204, "name": "windows-build", "node": "pve2", "type": "qemu", "status": "running", "ips": ["10.20.30.34"]}
+  ]
+}}

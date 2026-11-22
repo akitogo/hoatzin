@@ -1,4 +1,6 @@
-# Hoatzin
+<p align="center"><img src="docs/icon.png" width="128" height="128" alt="Hoatzin app icon"></p>
+
+<h1 align="center">Hoatzin</h1>
 
 The [hoatzin](https://en.wikipedia.org/wiki/Hoatzin) is a funny bird from the swamps of the Amazon:
 a punk crest, a blue face and red eyes. Its chicks climb through branches with claws on their wings,
@@ -8,6 +10,11 @@ app shares its name, not its smell.
 Hoatzin is a native macOS connection manager: a sidebar tree of folders and SSH connections, plus
 Proxmox VE servers whose VMs and containers are listed live. Each connection opens via SSH (in
 iTerm2, Terminal or a built-in tab) or through the Proxmox console (xterm.js / noVNC).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
+  <img src="docs/screenshots/main-light.png" alt="Hoatzin's main window: folders with SSH hosts and a Proxmox cluster with its nodes, VMs and containers in the sidebar, and the cluster's guests in the overview">
+</picture>
 
 ## Why Hoatzin
 
@@ -21,6 +28,11 @@ iTerm2, Terminal or a built-in tab) or through the Proxmox console (xterm.js / n
 * **AI apps can help with your servers, and you stay in charge.** Through its MCP server, Claude and
   other AI apps can find connections, read terminal tabs, open sessions and run commands. Hoatzin
   shows you every action before it happens, logs it, and never hands a password to the AI.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/ai-dark.png">
+  <img src="docs/screenshots/ai-light.png" alt="Hoatzin asking whether Claude may run the command systemctl status nginx on web01, with Deny and Run buttons">
+</picture>
 
 ## Build & run
 
@@ -320,8 +332,15 @@ once for Automation permission); otherwise iTerm2 opens a new window.
   second test instance. `-aiAccess commands` on the app's command line sets the level for that run only.
 * `HOATZIN_AI_LOG=/path.jsonl`: use another AI activity log. With `HOATZIN_LIBRARY` set, the
   log goes next to that library file instead of `~/Library/Logs`.
-* `HOATZIN_SNAPSHOT=/path/prefix`: render the app's own windows to PNGs after 3 s.
-* `HOATZIN_AUTOCONNECT=<entry name>`: connect to that SSH entry on launch.
+* `HOATZIN_SNAPSHOT=/path/prefix`: render the app's own windows to PNGs after 3 s, an open sheet
+  also drawn onto its window. `HOATZIN_SNAPSHOT_SIZE=1240x720` sets the main window's size first,
+  `HOATZIN_APPEARANCE=light` or `dark` the appearance.
+* `HOATZIN_DEMO_PROXMOX=/path/proxmox.json`: fill Proxmox servers from a file instead of their API
+  (see `docs/demo`).
+* `HOATZIN_SELECT=<entry name>`: select that entry on launch. `HOATZIN_AUTOCONNECT=<entry name>`
+  connects to that SSH entry.
+* `scripts/screenshots.sh`: retakes the README screenshots from the demo data in `docs/demo`, in
+  light and dark. Your own library and settings are neither shown nor changed.
 * `HOATZIN_OPEN_ABOUT=1` / `HOATZIN_OPEN_SETTINGS=1`: open the About panel or Settings on launch.
 * `-AppleLanguages "(en)"` (or `"(de)"`) on the app's command line: run in that language once.
 * `HOATZIN_SSHD_PORT=22222 swift test --filter SSHIntegrationTests`: checks against a local sshd
@@ -338,7 +357,7 @@ Hoatzin is free software: you may use, change and pass it on, also commercially,
 of the GNU General Public License, version 3 (see `LICENSE`). Whoever distributes a changed version
 has to publish its source code under the same license.
 
-The name "Hoatzin" and the app icon (`Resources/AppIcon-source.png`, `Resources/AppIcon.icns`) are
-not covered by the GPL. Forks need their own name and icon.
+The name "Hoatzin" and the app icon (`Resources/AppIcon-source.png`, `Resources/AppIcon.icns`,
+`docs/icon.png`) are not covered by the GPL. Forks need their own name and icon.
 
 Bundled third-party code: SwiftTerm (MIT License), listed with its license text in *About Hoatzin*.
