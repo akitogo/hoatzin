@@ -1,0 +1,12 @@
+/* English Siri phrases for Hoatzin's App Shortcuts (the source language). The German ones are in
+   ../de.lproj/AppShortcuts.strings. */
+
+"Open ${target} in ${applicationName}" = "Open ${target} in ${applicationName}";
+"Open ${target} with ${applicationName}" = "Open ${target} with ${applicationName}";
+"Connect to ${target} with ${applicationName}" = "Connect to ${target} with ${applicationName}";
+"Open a connection in ${applicationName}" = "Open a connection in ${applicationName}";
+"Find connections in ${applicationName}" = "Find connections in ${applicationName}";
+"Search ${applicationName}" = "Search ${applicationName}";
+"Show connections in ${applicationName}" = "Show connections in ${applicationName}";
+"Run a command with ${applicationName}" = "Run a command with ${applicationName}";
+"Run a command on ${connection} with ${applicationName}" = "Run a command on ${connection} with ${applicationName}";

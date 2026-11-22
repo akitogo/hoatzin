@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Entitlements of Hoatzin.app. The app runs with the Hardened Runtime (needed for
+     notarization), which blocks Apple Events unless they are allowed here. Hoatzin sends them
+     to iTerm2 to open SSH sessions as tabs; macOS still asks the user once. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+</dict>
+</plist>

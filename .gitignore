@@ -1,0 +1,10 @@
+# SwiftPM and Xcode
+.build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+
+# Built app, notarization upload and release archives (attached to GitHub releases instead)
+build/
+
+# macOS
+.DS_Store

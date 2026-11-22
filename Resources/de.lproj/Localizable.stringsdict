@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- German texts that depend on a count. Keys are the English texts in the code. -->
+<plist version="1.0">
+<dict>
+	<key>%lld entries</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@entries@</string>
+		<key>entries</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld Eintrag</string>
+			<key>other</key>
+			<string>%lld Einträge</string>
+		</dict>
+	</dict>
+	<key>The folder and the %lld entries inside it are removed from Hoatzin. Saved Keychain passwords are kept.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folder@</string>
+		<key>folder</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Der Ordner und der Eintrag darin werden aus Hoatzin entfernt. Im Schlüsselbund gesicherte Passwörter bleiben erhalten.</string>
+			<key>other</key>
+			<string>Der Ordner und die %lld Einträge darin werden aus Hoatzin entfernt. Im Schlüsselbund gesicherte Passwörter bleiben erhalten.</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

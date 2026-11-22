@@ -1,0 +1,3 @@
+/* German Info.plist texts. */
+"NSAppleEventsUsageDescription" = "Hoatzin öffnet SSH-Sitzungen als neue Tabs in iTerm2.";
+"NSHumanReadableCopyright" = "© 2026 Akitogo Internet and Media Applications GmbH. Lizenziert unter der GNU GPL v3.";

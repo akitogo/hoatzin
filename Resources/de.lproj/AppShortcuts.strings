@@ -1,0 +1,17 @@
+/* German Siri phrases for Hoatzin's App Shortcuts. Keys are the English phrases in
+   Sources/Hoatzin/Intents/Intents.swift; keep every ${…} placeholder. */
+
+/* Open Connection */
+"Open ${target} in ${applicationName}" = "Öffne ${target} in ${applicationName}";
+"Open ${target} with ${applicationName}" = "Öffne ${target} mit ${applicationName}";
+"Connect to ${target} with ${applicationName}" = "Verbinde mit ${target} über ${applicationName}";
+"Open a connection in ${applicationName}" = "Öffne eine Verbindung in ${applicationName}";
+
+/* Find Connections */
+"Find connections in ${applicationName}" = "Suche Verbindungen in ${applicationName}";
+"Search ${applicationName}" = "Durchsuche ${applicationName}";
+"Show connections in ${applicationName}" = "Zeige Verbindungen in ${applicationName}";
+
+/* Run Command over SSH */
+"Run a command with ${applicationName}" = "Führe einen Befehl mit ${applicationName} aus";
+"Run a command on ${connection} with ${applicationName}" = "Führe einen Befehl auf ${connection} mit ${applicationName} aus";
