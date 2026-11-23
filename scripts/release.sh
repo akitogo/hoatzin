@@ -98,12 +98,13 @@ git add "$PLIST"
 git diff --cached --quiet || git commit -m "Release $VERSION"
 git tag -a "$TAG" -m "Hoatzin $VERSION"
 git push origin main "$TAG"
-args=(release create "$TAG" "$ZIP" --verify-tag --title "Hoatzin $VERSION"
-      --notes "Notarized for macOS 14 or later. SHA-256 of Hoatzin-$VERSION.zip: \`$SHA\`")
+# The notes always end with the zip's checksum, also below notes from --notes-file.
+checksum="Notarized for macOS 14 or later. SHA-256 of Hoatzin-$VERSION.zip: \`$SHA\`"
+args=(release create "$TAG" "$ZIP" --verify-tag --title "Hoatzin $VERSION")
 if [[ -n $NOTES_FILE ]]; then
-  args=(release create "$TAG" "$ZIP" --verify-tag --title "Hoatzin $VERSION" --notes-file "$NOTES_FILE")
+  args+=(--notes "$(<"$NOTES_FILE")"$'\n\n'"$checksum")
 else
-  args+=(--generate-notes)
+  args+=(--notes "$checksum" --generate-notes)
 fi
 $PRERELEASE && args+=(--prerelease)
 gh "${args[@]}"
