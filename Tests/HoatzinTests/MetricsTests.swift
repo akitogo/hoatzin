@@ -154,3 +154,40 @@ final class MetricChartTests: XCTestCase {
         XCTAssertGreaterThan(recorder.samples[1].values[.netIn] ?? -1, 0)
     }
 }
+
+final class GuestSortingTests: XCTestCase {
+    private func guest(_ vmid: Int, _ name: String, cpu: Double? = nil, ip: String? = nil) -> PVEGuest {
+        var guest = PVEGuest(vmid: vmid, name: name, node: "pve1", type: .qemu,
+                             status: cpu == nil ? "stopped" : "running", isTemplate: false, ips: ip.map { [$0] } ?? [])
+        guest.cpu = cpu
+        return guest
+    }
+
+    private func ids(_ guests: [PVEGuest], _ comparator: GuestComparator) -> [Int] {
+        guests.sorted(using: [comparator]).map(\.vmid)
+    }
+
+    func testNamesSortLikeTheFinder() {
+        let guests = [guest(1, "web10"), guest(2, "Web2"), guest(3, "db")]
+        XCTAssertEqual(ids(guests, GuestComparator(.name)), [3, 2, 1])
+        XCTAssertEqual(ids(guests, GuestComparator(.name, order: .reverse)), [1, 2, 3])
+    }
+
+    func testStoppedGuestsStayLastForCPU() {
+        let guests = [guest(1, "a", cpu: 0.2), guest(2, "b"), guest(3, "c", cpu: 0.5), guest(4, "d", cpu: 0.2)]
+        XCTAssertEqual(ids(guests, GuestComparator(.cpu)), [1, 4, 3, 2])
+        XCTAssertEqual(ids(guests, GuestComparator(.cpu, order: .reverse)), [3, 1, 4, 2])
+    }
+
+    func testAddressesSortByNumber() {
+        let guests = [guest(1, "a", ip: "10.0.0.10"), guest(2, "b"), guest(3, "c", ip: "10.0.0.9"), guest(4, "d", ip: "host.example")]
+        XCTAssertEqual(ids(guests, GuestComparator(.address)), [3, 1, 4, 2])
+        XCTAssertEqual(ids(guests, GuestComparator(.address, order: .reverse)), [4, 1, 3, 2])
+    }
+
+    func testRawValueRoundTrip() {
+        XCTAssertEqual(GuestComparator(rawValue: "cpu:desc"), GuestComparator(.cpu, order: .reverse))
+        XCTAssertEqual(GuestComparator(rawValue: "memory:asc").rawValue, "memory:asc")
+        XCTAssertEqual(GuestComparator(rawValue: "nonsense"), GuestComparator(.id))
+    }
+}

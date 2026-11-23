@@ -78,12 +78,14 @@ enum Prefs {
     static let proxmoxRefreshInterval = "proxmoxRefreshInterval"
     /// MetricsTimeframe raw value last chosen for the graphs.
     static let metricsTimeframe = "metricsTimeframe"
+    /// GuestComparator raw value: the column the guest list is sorted by, e.g. "cpu:desc".
+    static let guestSort = "guestSort"
 
     /// Every setting the user can change (also what the move from RemoteDeck copies).
     static let all = [sshOpenIn, itermNewTab, terminalFontSize, savePasswordsByDefault, defaultSSHUser, defaultSSHAuth,
                       defaultSSHKeyFile, requireTouchID, touchIDGracePeriod, aiAccess, aiReadOutput, runCommandAction,
                       spotlightConnections, addressTruncation, iCloudSync, proxmoxRefreshInterval, metricsTimeframe,
-                      "sidebarCollapsed"]
+                      guestSort, "sidebarCollapsed"]
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -104,6 +106,7 @@ enum Prefs {
             iCloudSync: false,
             proxmoxRefreshInterval: 10.0,
             metricsTimeframe: MetricsTimeframe.hour.rawValue,
+            guestSort: "id:asc",
         ])
     }
 

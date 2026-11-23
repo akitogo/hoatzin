@@ -208,8 +208,16 @@ private struct ProxmoxOverview: View {
     @Environment(AppModel.self) private var model
     @State private var tableSelection: Int?
     @AppStorage(Prefs.proxmoxRefreshInterval) private var interval = 10.0
+    @AppStorage(Prefs.guestSort) private var guestSort = "id:asc"
 
     private struct UsageKey: Hashable { let server: UUID; let interval: Double }
+
+    /// The clicked column, remembered in the settings. Further levels the table adds are
+    /// dropped: equal values are ordered by ID anyway.
+    private var sortOrder: Binding<[GuestComparator]> {
+        Binding(get: { [GuestComparator(rawValue: guestSort)] },
+                set: { guestSort = $0.first?.rawValue ?? "id:asc" })
+    }
 
     var body: some View {
         let c = item.proxmox ?? ProxmoxConfig()
@@ -238,25 +246,27 @@ private struct ProxmoxOverview: View {
             ])
 
             if !state.guests.isEmpty {
-                Table(state.guests, selection: $tableSelection) {
-                    TableColumn("") { g in
+                Table(state.guests.sorted(using: sortOrder.wrappedValue), selection: $tableSelection,
+                      sortOrder: sortOrder) {
+                    TableColumn("", sortUsing: GuestComparator(.status)) { g in
                         Circle().fill(g.isRunning ? Color.green : Color.secondary.opacity(0.4)).frame(width: 8, height: 8)
                     }
                     .width(14)
-                    TableColumn("ID") { g in Text(String(g.vmid)).monospacedDigit() }.width(50)
-                    TableColumn("Name", value: \.name)
-                    TableColumn("Type") { g in Text(g.type.label) }.width(40)
-                    TableColumn("Node", value: \.node).width(80)
-                    TableColumn("CPU") { g in
+                    TableColumn("ID", sortUsing: GuestComparator(.id)) { g in Text(String(g.vmid)).monospacedDigit() }
+                        .width(50)
+                    TableColumn("Name", sortUsing: GuestComparator(.name)) { g in Text(g.name) }
+                    TableColumn("Type", sortUsing: GuestComparator(.type)) { g in Text(g.type.label) }.width(40)
+                    TableColumn("Node", sortUsing: GuestComparator(.node)) { g in Text(g.node) }.width(80)
+                    TableColumn("CPU", sortUsing: GuestComparator(.cpu, order: .reverse)) { g in
                         UsageCell(fraction: g.cpu, text: g.cpu.map(MetricUnit.percent.format))
                     }
                     .width(100)
-                    TableColumn("Memory") { g in
+                    TableColumn("Memory", sortUsing: GuestComparator(.memory, order: .reverse)) { g in
                         UsageCell(fraction: g.memory.flatMap { used in g.maxMemory.map { $0 > 0 ? used / $0 : 0 } },
                                   text: g.memory.map(MetricUnit.bytes.format))
                     }
                     .width(120)
-                    TableColumn("Address") { g in
+                    TableColumn("Address", sortUsing: GuestComparator(.address)) { g in
                         Text(g.ips.first ?? "").font(.system(.body, design: .monospaced))
                     }
                 }
