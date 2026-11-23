@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.spotlightConnections) private var spotlightConnections = true
     @AppStorage(Prefs.addressTruncation) private var addressTruncation: AddressTruncation = .start
     @AppStorage(Prefs.iCloudSync) private var iCloudSync = false
+    @AppStorage(Prefs.proxmoxRefreshInterval) private var proxmoxRefreshInterval = 10.0
     @State private var copied: String?
     @Environment(\.openWindow) private var openWindow
 
@@ -42,6 +43,13 @@ struct SettingsView: View {
                 Picker("Shorten long addresses", selection: $addressTruncation) {
                     ForEach(AddressTruncation.allCases) { Text($0.label).tag($0) }
                 }
+            }
+            Section("Proxmox") {
+                Picker("Update live values", selection: $proxmoxRefreshInterval) {
+                    ForEach(RefreshInterval.choices, id: \.self) { Text(RefreshInterval.label($0)).tag($0) }
+                }
+                Text("CPU and memory in the guest list, the figures above the graphs and the Live graph follow this. The other graphs come from Proxmox, which keeps at most one value per minute. Updates pause while Hoatzin’s windows can’t be seen.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Default login") {
                 TextField("User", text: $defaultUser, prompt: Text("root"))

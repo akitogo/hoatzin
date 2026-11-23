@@ -74,11 +74,16 @@ enum Prefs {
     static let addressTruncation = "addressTruncation"
     /// Sync the library through iCloud (see LibrarySync).
     static let iCloudSync = "iCloudSync"
+    /// Seconds between updates of Proxmox live values (graphs, usage columns); 0 = manually.
+    static let proxmoxRefreshInterval = "proxmoxRefreshInterval"
+    /// MetricsTimeframe raw value last chosen for the graphs.
+    static let metricsTimeframe = "metricsTimeframe"
 
     /// Every setting the user can change (also what the move from RemoteDeck copies).
     static let all = [sshOpenIn, itermNewTab, terminalFontSize, savePasswordsByDefault, defaultSSHUser, defaultSSHAuth,
                       defaultSSHKeyFile, requireTouchID, touchIDGracePeriod, aiAccess, aiReadOutput, runCommandAction,
-                      spotlightConnections, addressTruncation, iCloudSync, "sidebarCollapsed"]
+                      spotlightConnections, addressTruncation, iCloudSync, proxmoxRefreshInterval, metricsTimeframe,
+                      "sidebarCollapsed"]
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -97,6 +102,8 @@ enum Prefs {
             spotlightConnections: true,
             addressTruncation: AddressTruncation.start.rawValue,
             iCloudSync: false,
+            proxmoxRefreshInterval: 10.0,
+            metricsTimeframe: MetricsTimeframe.hour.rawValue,
         ])
     }
 

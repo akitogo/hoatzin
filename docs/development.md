@@ -114,8 +114,11 @@ of releases.
   also drawn onto its window. `HOATZIN_SNAPSHOT_SIZE=1240x720` sets the main window's size first,
   `HOATZIN_APPEARANCE=light` or `dark` the appearance.
 * `HOATZIN_DEMO_PROXMOX=/path/proxmox.json`: fill Proxmox servers from a file instead of their API
-  (see `docs/demo`).
-* `HOATZIN_SELECT=<entry name>`: select that entry on launch. `HOATZIN_AUTOCONNECT=<entry name>`
+  (see `docs/demo`). Usage, graphs and storage of those servers are made up (`DemoMetrics.swift`).
+  `-metricsTimeframe live -proxmoxRefreshInterval 2` on the app's command line opens the graphs
+  in *Live*, updated every 2 seconds.
+* `HOATZIN_SELECT=<entry name>`: select that entry on launch, or else the Proxmox node or guest
+  of that name. `HOATZIN_AUTOCONNECT=<entry name>`
   connects to that SSH entry.
 * `scripts/screenshots.sh`: retakes the README screenshots from the demo data in `docs/demo`, in
   light and dark. Your own library and settings are neither shown nor changed.

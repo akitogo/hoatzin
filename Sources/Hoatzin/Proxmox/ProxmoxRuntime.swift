@@ -15,9 +15,23 @@ struct PVEGuest: Identifiable, Hashable {
     var status: String
     var isTemplate: Bool
     var ips: [String] = []
+    /// CPU use as a share of `cpus` (0…1) and memory use in bytes; nil while stopped.
+    var cpu: Double? = nil
+    var cpus: Int? = nil
+    var memory: Double? = nil
+    var maxMemory: Double? = nil
 
     var id: Int { vmid }
     var isRunning: Bool { status == "running" }
+
+    /// Status and usage from an entry of `/cluster/resources`.
+    mutating func applyUsage(_ entry: [String: Any]) {
+        status = entry["status"] as? String ?? status
+        cpus = ProxmoxClient.int(entry["maxcpu"]) ?? cpus
+        maxMemory = MetricsParser.double(entry["maxmem"]) ?? maxMemory
+        cpu = isRunning ? MetricsParser.double(entry["cpu"]) : nil
+        memory = isRunning ? MetricsParser.double(entry["mem"]) : nil
+    }
 }
 
 struct PVENodeInfo: Identifiable, Hashable {
@@ -128,6 +142,11 @@ final class ProxmoxRuntime {
             throw ProxmoxError.transport(String(localized: "Proxmox server has no host configured."))
         }
         if client.hasValidTicket { return client }
+        // A ticket that's nearly two hours old can still be renewed without asking for a password.
+        if client.ticket != nil {
+            await renew(serverID, client)
+            if client.hasValidTicket { return client }
+        }
 
         let task = Task { @MainActor in
             try await self.login(serverID: serverID, client: client)
@@ -276,7 +295,7 @@ final class ProxmoxRuntime {
                   let node = entry["node"] as? String,
                   let type = GuestType(rawValue: entry["type"] as? String ?? "")
             else { return nil }
-            return PVEGuest(
+            var guest = PVEGuest(
                 vmid: vmid,
                 name: entry["name"] as? String ?? "\(type.label) \(vmid)",
                 node: node,
@@ -285,6 +304,8 @@ final class ProxmoxRuntime {
                 isTemplate: ProxmoxClient.int(entry["template"]) == 1,
                 ips: previous[vmid] ?? []
             )
+            guest.applyUsage(entry)
+            return guest
         }
         guests.sort { $0.vmid < $1.vmid }
 
@@ -309,6 +330,48 @@ final class ProxmoxRuntime {
                 addNext()
             }
         }
+    }
+
+    // MARK: Live data (graphs, usage columns)
+
+    @ObservationIgnored private var renewals: [UUID: Task<Void, Never>] = [:]
+
+    /// The `data` of an API call made with the current session. Never asks for a password:
+    /// without a session it throws `notLoggedIn`. A session older than an hour is renewed first,
+    /// so graphs that stay open keep working.
+    func sessionGet(_ serverID: UUID, _ path: String) async throws -> Any? {
+        if demoServers.contains(serverID) { return DemoMetrics.response(path, state: states[serverID]) }
+        guard let item = library.item(serverID), let client = client(for: item), client.ticket != nil else {
+            throw ProxmoxError.notLoggedIn
+        }
+        if let age = client.ticketAge, age > 60 * 60 { await renew(serverID, client) }
+        guard client.hasValidTicket else { throw ProxmoxError.notLoggedIn }
+        return try await client.get(path)
+    }
+
+    /// Renews the ticket once, however many callers ask at the same time.
+    private func renew(_ serverID: UUID, _ client: ProxmoxClient) async {
+        if let running = renewals[serverID] { return await running.value }
+        let task = Task { _ = try? await client.renewTicket() }
+        renewals[serverID] = task
+        await task.value
+        renewals[serverID] = nil
+    }
+
+    /// Updates the guests' status and CPU and memory use with one quick call, without asking
+    /// for a login. New or removed guests wait for the next full refresh.
+    func refreshUsage(_ serverID: UUID) async {
+        guard let resources = try? await sessionGet(serverID, "/cluster/resources?type=vm") as? [[String: Any]],
+              var guests = states[serverID]?.guests
+        else { return }
+        var entries: [Int: [String: Any]] = [:]
+        for entry in resources {
+            if let vmid = ProxmoxClient.int(entry["vmid"]) { entries[vmid] = entry }
+        }
+        for index in guests.indices {
+            if let entry = entries[guests[index].vmid] { guests[index].applyUsage(entry) }
+        }
+        states[serverID]?.guests = guests
     }
 
     // MARK: IP discovery

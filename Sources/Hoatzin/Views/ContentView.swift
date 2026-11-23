@@ -83,8 +83,20 @@ struct ContentView: View {
                 }
                 return nil
             }
-            if let name = environment["HOATZIN_SELECT"], let item = find(name, in: model.library.items, ssh: false) {
-                model.selection = .item(item.id)
+            if let name = environment["HOATZIN_SELECT"] {
+                // A library entry, or else a Proxmox node or guest of that name.
+                if let item = find(name, in: model.library.items, ssh: false) {
+                    model.selection = .item(item.id)
+                } else {
+                    for server in model.library.proxmoxServers {
+                        let state = model.proxmox.state(server.id)
+                        if state.nodes.contains(where: { $0.name == name }) {
+                            model.selection = .node(server: server.id, node: name)
+                        } else if let guest = state.guests.first(where: { $0.name == name }) {
+                            model.selection = .guest(server: server.id, vmid: guest.vmid)
+                        }
+                    }
+                }
             }
             if let name = environment["HOATZIN_AUTOCONNECT"], let item = find(name, in: model.library.items, ssh: true) {
                 model.selection = .item(item.id)

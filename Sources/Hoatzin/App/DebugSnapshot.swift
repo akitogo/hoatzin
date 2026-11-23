@@ -9,6 +9,9 @@ import AppKit
 /// * `HOATZIN_SNAPSHOT_SIZE=1240x760` gives the main window that content size first.
 /// * `HOATZIN_APPEARANCE=light` or `dark` overrides the system appearance.
 enum DebugSnapshot {
+    /// True for a run that takes snapshots: the mouse, wherever it is, shouldn't change them.
+    static var isActive: Bool { ProcessInfo.processInfo.environment["HOATZIN_SNAPSHOT"] != nil }
+
     static func scheduleIfRequested() {
         let environment = ProcessInfo.processInfo.environment
         switch environment["HOATZIN_APPEARANCE"] {

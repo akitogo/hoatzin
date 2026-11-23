@@ -93,6 +93,11 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
         }
     }
 
+    /// How long ago the ticket was issued or renewed.
+    var ticketAge: TimeInterval? {
+        lock.withLock { _issued.map { Date().timeIntervalSince($0) } }
+    }
+
     func invalidateTicket() {
         lock.withLock { _ticket = nil; _csrf = nil; _issued = nil }
     }
@@ -115,6 +120,19 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
     func login(user: String, password: String) async throws {
         let (status, json) = try await raw("POST", "/api2/json/access/ticket",
                                            form: ["username": user, "password": password],
+                                           authenticated: false, allowUnauthorized: true)
+        try handleLogin(status: status, json: json)
+    }
+
+    /// A fresh ticket for the current one, without the password: Proxmox accepts a valid ticket
+    /// in place of the password. Leaves the old ticket in place if that fails.
+    func renewTicket() async throws {
+        guard let (user, ticket) = lock.withLock({ () -> (String, String)? in
+            guard let user = _user, let ticket = _ticket else { return nil }
+            return (user, ticket)
+        }) else { throw ProxmoxError.notLoggedIn }
+        let (status, json) = try await raw("POST", "/api2/json/access/ticket",
+                                           form: ["username": user, "password": ticket],
                                            authenticated: false, allowUnauthorized: true)
         try handleLogin(status: status, json: json)
     }

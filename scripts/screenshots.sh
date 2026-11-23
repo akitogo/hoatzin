@@ -2,6 +2,7 @@
 # Takes the README screenshots from demo data (docs/demo), in light and dark appearance:
 #   docs/screenshots/main-{light,dark}.png  the main window with the Proxmox server "Office"
 #   docs/screenshots/ai-{light,dark}.png    the confirmation before an AI app runs a command
+#   docs/screenshots/graphs-{light,dark}.png  the graphs of the Proxmox node pve1
 #
 # Uses build/Hoatzin.app, so run scripts/build-app.sh first. Your own library and settings are
 # neither shown nor changed: the app runs with the demo library, its own AI log and its own
@@ -38,8 +39,8 @@ shoot() { # <name> <light|dark> <entry to select> [ask]
   local name=$1 appearance=$2 select=$3 ask=${4:-}
   HOATZIN_LIBRARY=$PWD/docs/demo/library.json HOATZIN_DEMO_PROXMOX=$PWD/docs/demo/proxmox.json \
   HOATZIN_AI_LOG=$WORK/ai.jsonl HOATZIN_CONTROL_SOCKET=$SOCKET HOATZIN_SELECT=$select \
-  HOATZIN_APPEARANCE=$appearance HOATZIN_SNAPSHOT_SIZE=1240x720 HOATZIN_SNAPSHOT=$WORK/$name HOATZIN_SNAPSHOT_DELAY=6 \
-    "$MACOS/Hoatzin" -AppleLanguages '(en)' -aiAccess commands -spotlightConnections NO >"$WORK/$name.log" 2>&1 &
+  HOATZIN_APPEARANCE=$appearance HOATZIN_SNAPSHOT_SIZE=${SIZE:-1240x720} HOATZIN_SNAPSHOT=$WORK/$name HOATZIN_SNAPSHOT_DELAY=6 \
+    "$MACOS/Hoatzin" -AppleLanguages '(en)' -aiAccess commands -spotlightConnections NO -metricsTimeframe hour >"$WORK/$name.log" 2>&1 &
   local pid=$!
   if [[ -n $ask ]]; then
     sleep 3
@@ -58,4 +59,5 @@ shoot() { # <name> <light|dark> <entry to select> [ask]
 for appearance in light dark; do
   shoot "main-$appearance" "$appearance" Office
   shoot "ai-$appearance" "$appearance" web01 ask
+  SIZE=1240x1000 shoot "graphs-$appearance" "$appearance" pve1
 done

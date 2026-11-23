@@ -35,5 +35,21 @@
 			<string>The folder and the %lld entries inside it are removed from Hoatzin. Saved Keychain passwords are kept.</string>
 		</dict>
 	</dict>
+	<key>of %lld CPUs</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@cpus@</string>
+		<key>cpus</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>of %lld CPU</string>
+			<key>other</key>
+			<string>of %lld CPUs</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

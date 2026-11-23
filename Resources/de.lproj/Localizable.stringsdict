@@ -35,5 +35,21 @@
 			<string>Der Ordner und die %lld Einträge darin werden aus Hoatzin entfernt. Im Schlüsselbund gesicherte Passwörter bleiben erhalten.</string>
 		</dict>
 	</dict>
+	<key>of %lld CPUs</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@cpus@</string>
+		<key>cpus</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>von %lld CPU</string>
+			<key>other</key>
+			<string>von %lld CPUs</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

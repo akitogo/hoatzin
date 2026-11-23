@@ -194,6 +194,9 @@ private struct ProxmoxOverview: View {
     let item: LibraryItem
     @Environment(AppModel.self) private var model
     @State private var tableSelection: Int?
+    @AppStorage(Prefs.proxmoxRefreshInterval) private var interval = 10.0
+
+    private struct UsageKey: Hashable { let server: UUID; let interval: Double }
 
     var body: some View {
         let c = item.proxmox ?? ProxmoxConfig()
@@ -231,6 +234,15 @@ private struct ProxmoxOverview: View {
                     TableColumn("Name", value: \.name)
                     TableColumn("Type") { g in Text(g.type.label) }.width(40)
                     TableColumn("Node", value: \.node).width(80)
+                    TableColumn("CPU") { g in
+                        UsageCell(fraction: g.cpu, text: g.cpu.map(MetricUnit.percent.format))
+                    }
+                    .width(100)
+                    TableColumn("Memory") { g in
+                        UsageCell(fraction: g.memory.flatMap { used in g.maxMemory.map { $0 > 0 ? used / $0 : 0 } },
+                                  text: g.memory.map(MetricUnit.bytes.format))
+                    }
+                    .width(120)
                     TableColumn("Address") { g in
                         Text(g.ips.first ?? "").font(.system(.body, design: .monospaced))
                     }
@@ -245,6 +257,14 @@ private struct ProxmoxOverview: View {
                 } primaryAction: { ids in
                     if let vmid = ids.first { model.activate(.guest(server: item.id, vmid: vmid)) }
                 }
+            }
+        }
+        .task(id: UsageKey(server: item.id, interval: interval)) {
+            // CPU and memory in the table follow the live-value interval while they're visible.
+            while !Task.isCancelled {
+                if AppVisibility.isVisible { await model.proxmox.refreshUsage(item.id) }
+                guard interval > 0 else { return }
+                try? await Task.sleep(for: .seconds(interval))
             }
         }
     }
@@ -269,6 +289,10 @@ private struct NodeOverview: View {
             }
             if model.sshTarget(for: .node(server: serverID, node: node)) != nil {
                 ConnectButtons(id: .node(server: serverID, node: node))
+            }
+            if info?.online != false {
+                let subject = MetricsSubject.node(server: serverID, node: node)
+                MetricsPanel(subject: subject).id(subject).padding(.top, 6)
             }
         }
     }
@@ -310,6 +334,10 @@ private struct GuestOverview: View {
                 if let target, target.auth == .password {
                     Form { KeychainStatusRow(key: target.credentialKey) }
                         .formStyle(.grouped).frame(maxWidth: 560)
+                }
+                if !guest.isTemplate {
+                    let subject = MetricsSubject.guest(server: serverID, node: guest.node, type: guest.type, vmid: vmid)
+                    MetricsPanel(subject: subject).id(subject).padding(.top, 6)
                 }
             }
         } else {

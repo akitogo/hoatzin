@@ -103,6 +103,26 @@ and the launch stops with a message in the terminal. Refusals are logged as
 * The console is the Proxmox web console (xterm.js for containers and node shells, noVNC or serial
   for VMs) embedded in a tab, with the ticket held in a non-persistent web data store.
 * Each guest shows its VMID as a grey pill at the right edge, with the IP to the left of it.
+* **Usage:** the server's guest list shows each guest's CPU and memory use.
+* **Graphs:** a node's page shows its CPU, memory, load, root disk and uptime, graphs of CPU
+  (with IO wait), memory, network and load, and how full its storages are. A VM's or container's
+  page shows the same figures and graphs of CPU, memory, network and disk IO. Pick *Live*,
+  *Hour*, *Day*, *Week*, *Month* or *Year*; pointing at a graph shows the values of that moment
+  in all of them.
+* **Live values:** the graphs from *Hour* on come from Proxmox, which keeps at most one value per
+  minute. *Live* is recorded by Hoatzin from the current values. How often they're fetched (every
+  2 seconds to every minute, or only on request; 10 seconds by default) is set in the menu next to
+  the periods or in *Settings → Proxmox*. The figures and the guest list's usage columns follow
+  the same setting. Updates run only while the page is shown, and pause while Hoatzin's windows
+  can't be seen.
+* **Nothing to install:** the data comes from Proxmox' own API with your Proxmox login. A login
+  older than an hour is renewed in the background, so graphs left open don't ask for the
+  password again.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/graphs-dark.png">
+  <img src="docs/screenshots/graphs-light.png" alt="The page of the Proxmox node pve1: figures for CPU, memory, load, root disk and uptime, graphs of CPU, memory, network and load over the last hour, and the usage of its storages">
+</picture>
 
 ## Tabs
 
@@ -269,7 +289,8 @@ Hoatzin's actions are in the Shortcuts app (search for "Hoatzin"):
 
 *Hoatzin → Settings…* chooses where SSH sessions open (iTerm2 by default, Terminal, or the
 built-in tab). New iTerm2 sessions open as tabs in the front window via AppleScript (macOS asks
-once for Automation permission); otherwise iTerm2 opens a new window.
+once for Automation permission); otherwise iTerm2 opens a new window. *Settings → Proxmox* sets how
+often live values from Proxmox are updated.
 
 ## Building from source
 
