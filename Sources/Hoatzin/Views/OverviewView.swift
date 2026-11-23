@@ -65,6 +65,19 @@ private struct Page<Content: View>: View {
     }
 }
 
+/// Like `Page`, but without scrolling: its last element (a table) takes the rest of the height
+/// and scrolls by itself.
+private struct FillingPage<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) { content }
+            .padding(24)
+            .frame(maxWidth: 820, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
 private struct InfoGrid: View {
     let rows: [(LocalizedStringKey, String)]
 
@@ -201,7 +214,7 @@ private struct ProxmoxOverview: View {
     var body: some View {
         let c = item.proxmox ?? ProxmoxConfig()
         let state = model.proxmox.state(item.id)
-        Page {
+        FillingPage {
             Header(symbol: "server.rack", title: item.name, subtitle: "\(c.apiUser) @ \(c.host):\(c.port)")
             HStack {
                 Button {
@@ -247,7 +260,7 @@ private struct ProxmoxOverview: View {
                         Text(g.ips.first ?? "").font(.system(.body, design: .monospaced))
                     }
                 }
-                .frame(minHeight: 320)
+                .frame(minHeight: 200, maxHeight: .infinity)
                 .contextMenu(forSelectionType: Int.self) { ids in
                     if let vmid = ids.first {
                         ForEach(Array(model.menuItems(for: .guest(server: item.id, vmid: vmid)).enumerated()), id: \.offset) { _, entry in
@@ -261,8 +274,10 @@ private struct ProxmoxOverview: View {
         }
         .task(id: UsageKey(server: item.id, interval: interval)) {
             // CPU and memory in the table follow the live-value interval while they're visible.
+            var first = true
             while !Task.isCancelled {
-                if AppVisibility.isVisible { await model.proxmox.refreshUsage(item.id) }
+                if first || AppVisibility.isVisible { await model.proxmox.refreshUsage(item.id) }
+                first = false
                 guard interval > 0 else { return }
                 try? await Task.sleep(for: .seconds(interval))
             }
