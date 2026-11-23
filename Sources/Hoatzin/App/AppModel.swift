@@ -89,6 +89,8 @@ final class AppModel {
     let prompts: PromptCenter
     let broker: CredentialBroker
     let proxmox: ProxmoxRuntime
+    /// Keeps the library the same on the user's Macs through iCloud, if turned on.
+    let sync: LibrarySync
 
     var selection: SidebarID?
     var sessions: [OpenSession] = []
@@ -134,6 +136,7 @@ final class AppModel {
         self.prompts = prompts
         self.broker = broker
         self.proxmox = ProxmoxRuntime(library: library, broker: broker, prompts: prompts)
+        self.sync = LibrarySync(library: library)
         broker.onError = { [weak self] message in self?.alertMessage = message }
         alertMessage = library.loadError
         let logURL = activityLogURL

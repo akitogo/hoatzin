@@ -370,3 +370,26 @@
 "The name Hoatzin and its icon are not covered by the GPL." = "Der Name Hoatzin und das Icon fallen nicht unter die GPL.";
 /* Library purposes from scripts/acknowledgements.swift */
 "Terminal emulator for the built-in SSH tabs." = "Terminal-Emulator für die integrierten SSH-Tabs.";
+
+/* iCloud sync */
+"Sync with iCloud" = "Mit iCloud synchronisieren";
+"Keeps folders, connections and Proxmox servers the same on your Macs, end-to-end encrypted in your iCloud. Passwords stay in each Mac’s Keychain and are never synced." = "Hält Ordner, Verbindungen und Proxmox-Server auf deinen Macs gleich, Ende-zu-Ende-verschlüsselt in deiner iCloud. Passwörter bleiben im Schlüsselbund jedes Macs und werden nie synchronisiert.";
+"Last changed on “%@”." = "Zuletzt geändert auf „%@“.";
+"Sync Now" = "Jetzt synchronisieren";
+"This build of Hoatzin cannot use iCloud. The notarized app from the GitHub releases can." = "Dieser Build von Hoatzin kann iCloud nicht nutzen. Die notarisierte App aus den GitHub-Releases kann es.";
+"Syncing…" = "Synchronisiere …";
+"Up to date, checked at %@." = "Aktuell, geprüft um %@.";
+"Only the standard library syncs with iCloud." = "Nur die Standardbibliothek wird mit iCloud synchronisiert.";
+"The library in iCloud differs from the one on this Mac" = "Die Bibliothek in iCloud unterscheidet sich von der auf diesem Mac";
+"Merge keeps the folders and connections of both. You can also replace this Mac’s library with the one in iCloud, or the other way round. A copy of this Mac’s library stays in the Hoatzin folder. Passwords are not affected." = "Zusammenführen behält die Ordner und Verbindungen von beiden. Du kannst auch die Bibliothek dieses Macs durch die aus iCloud ersetzen oder umgekehrt. Eine Kopie der Bibliothek dieses Macs bleibt im Hoatzin-Ordner. Passwörter sind nicht betroffen.";
+"Merge" = "Zusammenführen";
+"Use iCloud Library" = "iCloud-Bibliothek verwenden";
+"Use This Mac’s Library" = "Bibliothek dieses Macs verwenden";
+"Sign in to iCloud in System Settings to sync the library." = "Melde dich in den Systemeinstellungen bei iCloud an, um die Bibliothek zu synchronisieren.";
+"iCloud is restricted on this Mac." = "iCloud ist auf diesem Mac eingeschränkt.";
+"iCloud is temporarily unavailable. Check your Apple Account in System Settings." = "iCloud ist vorübergehend nicht verfügbar. Prüfe deinen Apple Account in den Systemeinstellungen.";
+"The library in iCloud comes from a newer Hoatzin. Update Hoatzin on this Mac to sync." = "Die Bibliothek in iCloud stammt von einem neueren Hoatzin. Aktualisiere Hoatzin auf diesem Mac, um zu synchronisieren.";
+"The library was deleted from iCloud, so sync is now off." = "Die Bibliothek wurde aus iCloud gelöscht, daher ist die Synchronisierung jetzt aus.";
+"The library in iCloud keeps changing. Hoatzin tries again shortly." = "Die Bibliothek in iCloud ändert sich ständig. Hoatzin versucht es gleich noch einmal.";
+"Offline. Hoatzin syncs again when the connection is back." = "Offline. Hoatzin synchronisiert wieder, sobald die Verbindung zurück ist.";
+"Your iCloud storage is full." = "Dein iCloud-Speicher ist voll.";

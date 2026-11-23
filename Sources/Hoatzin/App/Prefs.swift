@@ -72,11 +72,13 @@ enum Prefs {
     static let spotlightConnections = "spotlightConnections"
     /// AddressTruncation raw value: where long addresses in the sidebar are shortened.
     static let addressTruncation = "addressTruncation"
+    /// Sync the library through iCloud (see LibrarySync).
+    static let iCloudSync = "iCloudSync"
 
     /// Every setting the user can change (also what the move from RemoteDeck copies).
     static let all = [sshOpenIn, itermNewTab, terminalFontSize, savePasswordsByDefault, defaultSSHUser, defaultSSHAuth,
                       defaultSSHKeyFile, requireTouchID, touchIDGracePeriod, aiAccess, aiReadOutput, runCommandAction,
-                      spotlightConnections, addressTruncation, "sidebarCollapsed"]
+                      spotlightConnections, addressTruncation, iCloudSync, "sidebarCollapsed"]
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -94,6 +96,7 @@ enum Prefs {
             runCommandAction: "ask",
             spotlightConnections: true,
             addressTruncation: AddressTruncation.start.rawValue,
+            iCloudSync: false,
         ])
     }
 

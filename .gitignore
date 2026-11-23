@@ -6,5 +6,8 @@
 # Built app, notarization upload and release archives (attached to GitHub releases instead)
 build/
 
+# Provisioning profile for iCloud sync (see scripts/build-app.sh)
+*.provisionprofile
+
 # macOS
 .DS_Store

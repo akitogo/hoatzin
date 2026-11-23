@@ -50,10 +50,12 @@ build=$(plist 'Print CFBundleVersion')
 if ! $DRY_RUN; then
   [[ -z $(git status --porcelain) ]] || fail "commit or stash your changes first"
   [[ $(git branch --show-current) == main ]] || fail "releases are made from main"
-  git remote get-url origin >/dev/null 2>&1 || fail "no 'origin' remote; create the GitHub repository first (see README)"
+  git remote get-url origin >/dev/null 2>&1 || fail "no 'origin' remote; create the GitHub repository first (see docs/development.md)"
   gh auth status >/dev/null 2>&1 || fail "not signed in to GitHub; run: gh auth login"
   git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && fail "tag $TAG exists already"
   [[ -z $(git ls-remote --tags origin "refs/tags/$TAG") ]] || fail "tag $TAG exists on GitHub already"
+  [[ -f ${HOATZIN_PROVISIONING_PROFILE:-Resources/Hoatzin.provisionprofile} ]] \
+    || fail "no provisioning profile, so the release would lack iCloud sync (see docs/development.md, Signing)"
 fi
 
 # 2. Version. A dry run puts Info.plist back afterwards.

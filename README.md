@@ -8,8 +8,10 @@ and it digests leaves in its crop much like a cow, which earned it the nickname 
 app shares its name, not its smell.
 
 Hoatzin is a native macOS connection manager: a sidebar tree of folders and SSH connections, plus
-Proxmox VE servers whose VMs and containers are listed live. Each connection opens via SSH (in
-iTerm2, Terminal or a built-in tab) or through the Proxmox console (xterm.js / noVNC).
+Proxmox VE servers whose VMs and containers are listed live. Each connection opens via SSH, in
+iTerm2, Terminal or a built-in terminal tab (based on
+[SwiftTerm](https://github.com/migueldeicaza/SwiftTerm)), or through the Proxmox console
+(xterm.js / noVNC).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
@@ -34,87 +36,12 @@ iTerm2, Terminal or a built-in tab) or through the Proxmox console (xterm.js / n
   <img src="docs/screenshots/ai-light.png" alt="Hoatzin asking whether Claude may run the command systemctl status nginx on web01, with Deny and Run buttons">
 </picture>
 
-## Build & run
+## Download
 
-```bash
-scripts/build-app.sh             # → build/Hoatzin.app, signed with your certificate
-scripts/build-app.sh --notarize  # also notarizes it, so it opens on other Macs
-scripts/build-app.sh --install   # also copies it to ~/Applications
-```
-
-### Signing and notarization
-
-The script signs with the first *Developer ID Application* certificate in your keychain, otherwise
-*Apple Development*, otherwise ad hoc (this Mac only). `HOATZIN_SIGN_IDENTITY` picks a certificate
-explicitly. Everything runs with the Hardened Runtime. `Resources/Hoatzin.entitlements` allows the
-Apple Events that open iTerm2 tabs.
-
-Once per Mac:
-
-1. **Certificates:** in Xcode open *Settings → Accounts*, add your Apple Account, select the team
-   and choose *Manage Certificates…*. With *+* add **Developer ID Application**, plus **Apple
-   Development** if you like.
-   * If Xcode refuses with "only the Account Holder" although developer.apple.com shows you as
-     Account Holder, Xcode is showing an outdated role. Create the certificate on the website
-     instead: *Certificates → + → Developer ID Application*, with a certificate request from
-     *Schlüsselbundverwaltung → Zertifikatsassistent*. Then double-click the downloaded `.cer`.
-   * If `security find-identity -v -p codesigning` then still lists no valid identity, Apple's
-     intermediate certificate is missing. Install it from
-     apple.com/certificateauthority (*Developer ID – G2*); Xcode normally adds it.
-2. **Build:** run `scripts/build-app.sh`. It prints `Signed as: Developer ID Application: … (TEAM ID)`.
-   The first time, allow codesign to use the key (*Immer erlauben*).
-3. **Notarization (for other Macs):**
-   * Create an app-specific password at account.apple.com (*Sign-In and Security*).
-   * Store it in your keychain with
-     `xcrun notarytool store-credentials hoatzin-notary --apple-id <your Apple Account> --team-id <TEAM ID>`.
-     It asks for the password; nothing is written to the repo.
-   * Then `scripts/build-app.sh --notarize` notarizes and staples the app.
-
-The script also writes `Contents/Resources/Acknowledgements.json`, the libraries shown in
-*About Hoatzin*. `scripts/acknowledgements.swift` builds it from the package's direct dependencies,
-the versions in `Package.resolved` and each checkout's license file. A new dependency only needs a
-one-line purpose there. Today the only bundled library is SwiftTerm (MIT).
-
-It also generates the App Intents metadata (`Contents/Resources/Metadata.appintents`) that
-Shortcuts, Siri and Spotlight read. Xcode does that for Xcode projects, SwiftPM doesn't, so the
-script runs Xcode's `appintentsmetadataprocessor` and `appintentsnltrainingprocessor` on the
-compiler's constant-value output. It then registers the app with Launch Services. macOS lists the
-actions once the new build has been launched.
-
-The app icon is made from `Resources/AppIcon-source.png` by `scripts/make-icon.swift`, again
-whenever that image changes. The script finds the artwork's rounded square, cuts it out onto a
-transparent background with a fitted squircle mask, places it on Apple's icon grid with a soft
-shadow, and writes all sizes into `Resources/AppIcon.icns`.
-
-Needs Xcode installed. The macOS 27 SDK's SwiftUI macros ship with Xcode, not with the Command
-Line Tools, and the script selects Xcode automatically. Tests: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`.
-
-### Releasing
-
-Releases go to GitHub with the notarized app attached as a zip. Once, create the repository and
-connect it:
-
-```bash
-gh repo create <owner>/hoatzin --public --source . --remote origin
-```
-
-Then each release is one command:
-
-```bash
-scripts/release.sh 1.0.1               # or --prerelease, or --notes-file notes.md
-scripts/release.sh 1.0.1 --dry-run     # build and package only, nothing published
-```
-
-`scripts/release.sh` does the following:
-
-1. **Checks:** everything is committed, you're on `main`, the tag is new and the version is not
-   older than the current one.
-2. **Version:** it sets the version in `Resources/Info.plist` and raises the build number.
-3. **Build:** it runs the tests, builds, signs and notarizes the app. It then checks that the
-   notarization is stapled and that Gatekeeper accepts the app.
-4. **Package:** it zips the app with `ditto`, which keeps signature and notarization intact.
-5. **Publish:** it commits the version, tags `v<version>`, pushes, and creates the GitHub release.
-   The release notes come from the commits, or from `--notes-file`, and include the zip's SHA-256.
+Download `Hoatzin-<version>.zip` from the
+[latest release](https://github.com/akitogo/hoatzin/releases/latest), unzip it and move Hoatzin
+to your Applications folder. It's signed with Akitogo's Developer ID and notarized by Apple, and
+needs macOS 14 or later. Each release lists the zip's SHA-256.
 
 ## Credentials: what lives where
 
@@ -123,6 +50,7 @@ scripts/release.sh 1.0.1 --dry-run     # build and package only, nothing publish
 | Folders, names, hosts, ports, users, key-file paths, pinned Proxmox certificate fingerprint | `~/Library/Application Support/Hoatzin/library.json` |
 | Passwords / key passphrases | macOS **login keychain** as internet-password items (server + account + protocol), visible in Keychain Access |
 | Proxmox auth ticket | memory only |
+| With iCloud sync on: a copy of `library.json` (never passwords) | your private iCloud database, end-to-end encrypted; the last synced state in `sync-state.json` next to the library |
 
 **The Passwords app can't be read directly.** Its entries live in the iCloud/data-protection
 keychain, which Apple restricts to Safari, the Passwords app and AutoFill. No third-party app can
@@ -141,11 +69,6 @@ The *Keychain entry* field on a connection lets several connections share one st
 then stays unlocked for a grace period (default 5 minutes; Settings → Passwords). It locks again
 when the Mac sleeps or the screen locks, or via *Connection → Lock Saved Passwords* (⌥⌘L). This
 check is enforced by the app. Keychain-enforced biometry would need an Apple-issued signing identity.
-
-**Keychain prompts after rebuilds:** an ad-hoc signed build has a new code hash every time, so
-macOS asks again after each rebuild (use *Always Allow*). Signed with your team's certificate, the
-app keeps one identity across builds. After the first *Always Allow* for a signed build, rebuilds
-no longer ask.
 
 ### How ssh gets the password
 
@@ -205,6 +128,26 @@ The field above the sidebar (⌘F) narrows the tree in place:
 
 Long addresses in the sidebar are shortened at the start by default (…30.20), which keeps the part
 that tells hosts apart. *Settings → Sidebar* switches to shortening at the end (10.20.3…).
+
+## iCloud sync
+
+*Settings → Library → Sync with iCloud* keeps folders, connections and Proxmox servers the same
+on all your Macs signed in to the same iCloud account. Passwords are never part of it: they stay
+in each Mac's Keychain.
+
+* **Private and encrypted:** the library is one record in your private CloudKit database, stored
+  in encrypted fields. Only your devices hold the keys; Apple and Akitogo can't read it.
+* **When:** at launch, when Hoatzin becomes active, every 5 minutes and a few seconds after a
+  change. When nothing changed, a sync only compares a change tag and downloads nothing.
+* **Merging:** each Mac remembers the library as last synced. Changes made on two Macs in between
+  are merged entry by entry: settings, folder and order separately. If both changed the same
+  thing, the version that reached iCloud first wins. A deletion never beats an edit, and a
+  deleted folder comes back if the other Mac put something new in it.
+* **First sync on a Mac:** if both this Mac and iCloud have a different library, Hoatzin asks:
+  merge both, use the iCloud library, or use this Mac's library. Before the first sync replaces
+  anything, it keeps a copy as `library.before-icloud.json` next to the library.
+* **Own builds:** a build from source needs an iCloud container and provisioning profile of its
+  own (see [docs/development.md](docs/development.md)). Without one the switch is disabled.
 
 ## Languages
 
@@ -325,29 +268,17 @@ Hoatzin's actions are in the Shortcuts app (search for "Hoatzin"):
 built-in tab). New iTerm2 sessions open as tabs in the front window via AppleScript (macOS asks
 once for Automation permission); otherwise iTerm2 opens a new window.
 
-## Debug aids
+## Building from source
 
-* `HOATZIN_LIBRARY=/path/library.json`: use another library file.
-* `HOATZIN_CONTROL_SOCKET=/path.sock` (app and helper): use another AI control socket, e.g. for a
-  second test instance. `-aiAccess commands` on the app's command line sets the level for that run only.
-* `HOATZIN_AI_LOG=/path.jsonl`: use another AI activity log. With `HOATZIN_LIBRARY` set, the
-  log goes next to that library file instead of `~/Library/Logs`.
-* `HOATZIN_SNAPSHOT=/path/prefix`: render the app's own windows to PNGs after 3 s, an open sheet
-  also drawn onto its window. `HOATZIN_SNAPSHOT_SIZE=1240x720` sets the main window's size first,
-  `HOATZIN_APPEARANCE=light` or `dark` the appearance.
-* `HOATZIN_DEMO_PROXMOX=/path/proxmox.json`: fill Proxmox servers from a file instead of their API
-  (see `docs/demo`).
-* `HOATZIN_SELECT=<entry name>`: select that entry on launch. `HOATZIN_AUTOCONNECT=<entry name>`
-  connects to that SSH entry.
-* `scripts/screenshots.sh`: retakes the README screenshots from the demo data in `docs/demo`, in
-  light and dark. Your own library and settings are neither shown nor changed.
-* `HOATZIN_OPEN_ABOUT=1` / `HOATZIN_OPEN_SETTINGS=1`: open the About panel or Settings on launch.
-* `-AppleLanguages "(en)"` (or `"(de)"`) on the app's command line: run in that language once.
-* `HOATZIN_SSHD_PORT=22222 swift test --filter SSHIntegrationTests`: checks against a local sshd
-  that real ssh routes its prompts through the helper, both the built-in way and the launcher way.
-* `HOATZIN_SSHD_PORT=22222 HOATZIN_SSHD_KEY=<key> HOATZIN_SSHD_KNOWN_HOSTS=<file> swift test
-  --filter RemoteCommandIntegrationTests`: runs AI commands against a local sshd that accepts that
-  key. It covers output, exit codes, timeouts, long output, refused host keys and password prompts.
+```bash
+scripts/build-app.sh             # → build/Hoatzin.app
+scripts/build-app.sh --install   # also copies it to ~/Applications
+```
+
+Needs Xcode. Without a Developer ID certificate the app is signed ad hoc and runs on that Mac only;
+without a provisioning profile of your own it has no iCloud sync. Signing, notarization, releases,
+what the build script does and the switches for testing are in
+[docs/development.md](docs/development.md).
 
 ## License
 
@@ -360,4 +291,5 @@ has to publish its source code under the same license.
 The name "Hoatzin" and the app icon (`Resources/AppIcon-source.png`, `Resources/AppIcon.icns`,
 `docs/icon.png`) are not covered by the GPL. Forks need their own name and icon.
 
-Bundled third-party code: SwiftTerm (MIT License), listed with its license text in *About Hoatzin*.
+Bundled third-party code: [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) by Miguel
+de Icaza (MIT License), the terminal in built-in tabs. Its license text is in *About Hoatzin*.

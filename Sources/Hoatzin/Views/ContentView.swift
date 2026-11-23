@@ -62,6 +62,7 @@ struct ContentView: View {
             Text(model.alertMessage ?? "")
         }
         .task {
+            model.sync.start()
             model.startAIControl()
             await model.proxmox.refreshAll()
         }

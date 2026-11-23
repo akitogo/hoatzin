@@ -107,7 +107,8 @@ struct LibraryItem: Identifiable, Codable, Hashable {
     }
 }
 
-private struct LibraryFile: Codable {
+/// The file format of library.json, also what iCloud sync stores (see `LibrarySync`).
+struct LibraryFile: Codable {
     static let currentVersion = 2
     var version: Int = LibraryFile.currentVersion
     var items: [LibraryItem]
@@ -120,6 +121,8 @@ private struct LibraryFile: Codable {
 final class LibraryStore {
     private(set) var items: [LibraryItem] = []
     var loadError: String?
+    /// Called after each change made in this app (not after `replaceAll`), e.g. to sync it.
+    @ObservationIgnored var onChange: (() -> Void)?
 
     let fileURL: URL
 
@@ -151,7 +154,7 @@ final class LibraryStore {
 
     /// v1 stored "root"/password as fixed guest SSH settings; untouched values now mean
     /// "use the app-wide default".
-    private static func migrate(_ list: [LibraryItem], from version: Int) -> [LibraryItem] {
+    nonisolated static func migrate(_ list: [LibraryItem], from version: Int) -> [LibraryItem] {
         list.map { item in
             var item = item
             item.children = migrate(item.children, from: version)
@@ -165,7 +168,18 @@ final class LibraryStore {
         }
     }
 
+    /// Replaces the whole library, e.g. with the one from iCloud. Does not call `onChange`.
+    func replaceAll(_ newItems: [LibraryItem]) {
+        items = newItems
+        write()
+    }
+
     private func save() {
+        write()
+        onChange?()
+    }
+
+    private func write() {
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

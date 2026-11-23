@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.runCommandAction) private var runCommandAction: CommandActionPolicy = .ask
     @AppStorage(Prefs.spotlightConnections) private var spotlightConnections = true
     @AppStorage(Prefs.addressTruncation) private var addressTruncation: AddressTruncation = .start
+    @AppStorage(Prefs.iCloudSync) private var iCloudSync = false
     @State private var copied: String?
     @Environment(\.openWindow) private var openWindow
 
@@ -136,6 +137,14 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Library") {
+                Toggle("Sync with iCloud", isOn: $iCloudSync)
+                    .disabled(!LibrarySync.hasCloudKitEntitlement && !iCloudSync)
+                    .onChange(of: iCloudSync) { _, _ in model.sync.settingChanged() }
+                if iCloudSync || !LibrarySync.hasCloudKitEntitlement {
+                    SyncStatusRow(sync: model.sync)
+                }
+                Text("Keeps folders, connections and Proxmox servers the same on your Macs, end-to-end encrypted in your iCloud. Passwords stay in each Mac’s Keychain and are never synced.")
+                    .font(.caption).foregroundStyle(.secondary)
                 LabeledContent("Connections file") {
                     Button("Show in Finder") {
                         NSWorkspace.shared.activateFileViewerSelecting([model.library.fileURL])
@@ -156,5 +165,55 @@ struct SettingsView: View {
     private func copy(_ text: String, as kind: String) {
         model.copyToPasteboard(text)
         copied = kind
+    }
+}
+
+/// The state of iCloud sync, with a button to sync right away.
+private struct SyncStatusRow: View {
+    let sync: LibrarySync
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Image(systemName: symbol).foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message)
+                if case .synced = sync.status, let device = sync.lastChangedBy {
+                    Text("Last changed on “\(device)”.").foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if LibrarySync.hasCloudKitEntitlement, sync.isEnabled {
+                Button("Sync Now") { sync.syncNow() }
+                    .disabled(sync.status == .syncing)
+            }
+        }
+        .font(.caption)
+    }
+
+    private var message: String {
+        switch sync.status {
+        case .off:
+            return LibrarySync.hasCloudKitEntitlement ? "" : String(localized: "This build of Hoatzin cannot use iCloud. The notarized app from the GitHub releases can.")
+        case .unavailable(let text), .failed(let text): return text
+        case .syncing: return String(localized: "Syncing…")
+        case .synced(let date): return String(localized: "Up to date, checked at \(date.formatted(date: .omitted, time: .shortened)).")
+        }
+    }
+
+    private var symbol: String {
+        switch sync.status {
+        case .off, .unavailable: return "icloud.slash"
+        case .syncing: return "arrow.triangle.2.circlepath.icloud"
+        case .synced: return "checkmark.icloud"
+        case .failed: return "exclamationmark.icloud"
+        }
+    }
+
+    private var color: Color {
+        switch sync.status {
+        case .failed: return .orange
+        case .synced: return .green
+        default: return .secondary
+        }
     }
 }

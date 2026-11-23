@@ -6,8 +6,12 @@
 #
 # Signing: HOATZIN_SIGN_IDENTITY if set, otherwise the first "Developer ID Application"
 # certificate in your keychain, otherwise "Apple Development", otherwise ad hoc (this Mac only).
+# iCloud sync needs the app's Developer ID provisioning profile as well (not in the repository):
+# HOATZIN_PROVISIONING_PROFILE, or Resources/Hoatzin.provisionprofile. Without it the app is
+# built without iCloud, and its Settings say so. HOATZIN_CLOUDKIT_ENV=Development (default
+# Production) uses CloudKit's development environment, for testing.
 # Notarizing uses the notarytool keychain profile HOATZIN_NOTARY_PROFILE (default
-# "hoatzin-notary"), created once with `xcrun notarytool store-credentials` (see README).
+# "hoatzin-notary"), created once with `xcrun notarytool store-credentials` (see docs/development.md).
 set -euo pipefail
 cd "${0:A:h}/.."
 
@@ -94,19 +98,57 @@ done
 # Every text needs its German translation (Resources/de.lproj); fails the build otherwise.
 swift scripts/check-translations.swift "$STRINGS" "$APP/Contents/Resources/Metadata.appintents/extract.actionsdata" Resources
 
+# iCloud (CloudKit) entitlements, allowed by the embedded provisioning profile. A profile only
+# works with a certificate it lists, so it is used with the Developer ID certificate only.
+ENTITLEMENTS=Resources/Hoatzin.entitlements
+PROFILE=${HOATZIN_PROVISIONING_PROFILE:-Resources/Hoatzin.provisionprofile}
+CLOUDKIT_ENV=${HOATZIN_CLOUDKIT_ENV:-Production}
+ICLOUD="off (no provisioning profile; see the top of this script)"
+if [[ -f $PROFILE && $IDENTITY == "Developer ID Application"* ]]; then
+  security cms -D -i "$PROFILE" > build/profile.plist
+  profile() { /usr/libexec/PlistBuddy -c "Print :$1" build/profile.plist; }
+  BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist")
+  TEAM=$(profile TeamIdentifier:0)
+  CONTAINER=iCloud.$BUNDLE_ID
+  [[ $(profile Entitlements:com.apple.application-identifier) == "$TEAM.$BUNDLE_ID" ]] \
+    || { echo "$PROFILE is not for $BUNDLE_ID" >&2; exit 1; }
+  [[ $IDENTITY == *"($TEAM)" ]] || { echo "$PROFILE belongs to team $TEAM, not to $IDENTITY" >&2; exit 1; }
+  [[ $(plutil -extract ExpirationDate raw build/profile.plist) > $(date -u +%Y-%m-%dT%H:%M:%SZ) ]] \
+    || { echo "$PROFILE has expired; download a new one (see docs/development.md)" >&2; exit 1; }
+  profile Entitlements:com.apple.developer.icloud-container-identifiers | grep -qx " *$CONTAINER" \
+    || { echo "$PROFILE does not include the iCloud container $CONTAINER" >&2; exit 1; }
+  profile Entitlements:com.apple.developer.icloud-container-environment | grep -qw "$CLOUDKIT_ENV" \
+    || { echo "$PROFILE does not allow CloudKit's $CLOUDKIT_ENV environment" >&2; exit 1; }
+  ENTITLEMENTS=build/Hoatzin.entitlements
+  cp Resources/Hoatzin.entitlements "$ENTITLEMENTS"
+  for command in "Add :com.apple.application-identifier string $TEAM.$BUNDLE_ID" \
+                 "Add :com.apple.developer.team-identifier string $TEAM" \
+                 "Add :com.apple.developer.icloud-container-identifiers array" \
+                 "Add :com.apple.developer.icloud-container-identifiers:0 string $CONTAINER" \
+                 "Add :com.apple.developer.icloud-services array" \
+                 "Add :com.apple.developer.icloud-services:0 string CloudKit" \
+                 "Add :com.apple.developer.icloud-container-environment string $CLOUDKIT_ENV"; do
+    /usr/libexec/PlistBuddy -c "$command" "$ENTITLEMENTS"
+  done
+  cp "$PROFILE" "$APP/Contents/embedded.provisionprofile"
+  rm -f build/profile.plist
+  ICLOUD="on ($CONTAINER, $CLOUDKIT_ENV)"
+fi
+
 # Helpers first, then the app around them. Hardened Runtime everywhere (required for
 # notarization); a secure timestamp for Developer ID signatures.
 SIGN=(codesign --force --options runtime --sign "$IDENTITY")
 [[ $IDENTITY == "Developer ID Application"* ]] && SIGN+=(--timestamp)
 "${SIGN[@]}" "$APP/Contents/MacOS/hoatzin-askpass"
 "${SIGN[@]}" "$APP/Contents/MacOS/hoatzin-mcp"
-"${SIGN[@]}" --entitlements Resources/Hoatzin.entitlements "$APP"
+"${SIGN[@]}" --entitlements "$ENTITLEMENTS" "$APP"
 codesign --verify --strict --deep "$APP"
 if [[ $IDENTITY == - ]]; then
   echo "Signed ad hoc (no Developer ID / Apple Development certificate found): runs on this Mac only."
 else
   echo "Signed as: $IDENTITY"
 fi
+echo "iCloud sync: $ICLOUD"
 
 if $NOTARIZE; then
   ditto -c -k --keepParent "$APP" build/Hoatzin-notarize.zip
