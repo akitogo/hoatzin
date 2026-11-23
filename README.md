@@ -29,7 +29,8 @@ iTerm2, Terminal or a built-in terminal tab (based on
   ones, and it speaks English and German.
 * **AI apps can help with your servers, and you stay in charge.** Through its MCP server, Claude and
   other AI apps can find connections, read terminal tabs, open sessions and run commands. Hoatzin
-  shows you every action before it happens, logs it, and never hands a password to the AI.
+  shows you every action before it happens, logs it, and never hands a password to the AI. AI
+  access is off by default; you switch it on in *Settings → AI Access*.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/ai-dark.png">
@@ -171,8 +172,10 @@ General → Language & Region → Applications*.
 ## AI access (MCP)
 
 AI apps such as Claude can use Hoatzin through its MCP helper,
-`Hoatzin.app/Contents/MacOS/hoatzin-mcp`. It's off until you choose a level in
-*Settings → AI Access*:
+`Hoatzin.app/Contents/MacOS/hoatzin-mcp`.
+
+**AI access is off by default.** Until you switch it on, every request from an AI app is refused.
+To switch it on, choose a level in *Settings → AI Access*:
 
 | Level | The AI may |
 |---|---|
