@@ -13,6 +13,9 @@ iTerm2, Terminal or a built-in terminal tab (based on
 [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm)), or through the Proxmox console
 (xterm.js / noVNC).
 
+**[Download the latest release](https://github.com/akitogo/hoatzin/releases/latest)**: a signed
+app, notarized by Apple, for macOS 14 or later (see [Download](#download)).
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
   <img src="docs/screenshots/main-light.png" alt="Hoatzin's main window: folders with SSH hosts and a Proxmox cluster with its nodes, VMs and containers in the sidebar, and the cluster's guests in the overview">
