@@ -17,8 +17,10 @@ final class MetricsModel {
     private(set) var history: [MetricSample] = []
     private(set) var historyTimeframe: MetricsTimeframe?
     private(set) var storages: [StorageUsage] = []
-    private(set) var error: String?
-    private(set) var notLoggedIn = false
+    /// Why the last update failed; nil after a success.
+    private(set) var problem: LiveDataProblem?
+    /// When the values were last updated.
+    private(set) var lastSuccess: Date?
     @ObservationIgnored private var lastSlowUpdate: Date?
 
     init(subject: MetricsSubject) {
@@ -52,13 +54,13 @@ final class MetricsModel {
                     storages = MetricsParser.storages(try await runtime.sessionGet(subject.server, subject.basePath + "/storage"))
                 }
             }
-            error = nil
-            notLoggedIn = false
-        } catch ProxmoxError.notLoggedIn {
-            notLoggedIn = true
+            problem = nil
+            lastSuccess = Date()
         } catch {
             guard !Task.isCancelled else { return }
-            self.error = error.localizedDescription
+            problem = LiveDataProblem(error)
+            // History and storage are tried again on the next update, not a minute later.
+            lastSlowUpdate = nil
         }
     }
 }
@@ -81,8 +83,8 @@ struct MetricsPanel: View {
     private struct PollKey: Hashable {
         let timeframe: MetricsTimeframe
         let interval: Double
-        /// A new login starts over right away instead of waiting for the next tick.
-        let session: String?
+        /// A login or refresh of the server starts over right away instead of waiting for the next tick.
+        let serverRefresh: Date?
     }
 
     var body: some View {
@@ -101,27 +103,28 @@ struct MetricsPanel: View {
                     Task { await metrics.update(model.proxmox, timeframe: timeframe, force: true) }
                 }
             }
-            if metrics.notLoggedIn && !server.isLoading {
-                HStack {
-                    Label("Not logged in to this Proxmox server.", systemImage: "lock").foregroundStyle(.secondary)
-                    Button("Log In") { Task { await model.proxmox.refresh(subject.server) } }
+            if let problem = metrics.problem {
+                LiveDataNotice(problem: problem, lastSuccess: metrics.lastSuccess, isLoggingIn: server.isLoading,
+                               logIn: { Task { await model.proxmox.refresh(subject.server) } },
+                               retry: { Task { await metrics.update(model.proxmox, timeframe: timeframe, force: true) } })
+            }
+            // Old values are dimmed while they can't be updated.
+            VStack(alignment: .leading, spacing: 14) {
+                if let status = metrics.status {
+                    StatTiles(status: status, node: subject.isNode)
                 }
-            } else if let error = metrics.error {
-                Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-            }
-            if let status = metrics.status {
-                StatTiles(status: status, node: subject.isNode)
-            }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(MetricChartSpec.charts(node: subject.isNode, live: timeframe == .live)) { spec in
-                    MetricChartView(spec: spec, samples: samples, timeframe: timeframe, hover: $hover)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    ForEach(MetricChartSpec.charts(node: subject.isNode, live: timeframe == .live)) { spec in
+                        MetricChartView(spec: spec, samples: samples, timeframe: timeframe, hover: $hover)
+                    }
+                }
+                if subject.isNode && !metrics.storages.isEmpty {
+                    StorageList(storages: metrics.storages)
                 }
             }
-            if subject.isNode && !metrics.storages.isEmpty {
-                StorageList(storages: metrics.storages)
-            }
+            .opacity(metrics.problem == nil ? 1 : 0.4)
         }
-        .task(id: PollKey(timeframe: timeframe, interval: interval, session: server.loggedInAs)) {
+        .task(id: PollKey(timeframe: timeframe, interval: interval, serverRefresh: server.lastRefresh)) {
             var first = true
             while !Task.isCancelled {
                 if first || AppVisibility.isVisible {
@@ -131,6 +134,65 @@ struct MetricsPanel: View {
                 guard interval > 0 else { return }
                 try? await Task.sleep(for: .seconds(interval))
             }
+        }
+    }
+}
+
+/// A clearly visible note that live values can't be updated, why, and since when the shown
+/// values are old, with the way out: logging in again or trying again.
+struct LiveDataNotice: View {
+    let problem: LiveDataProblem
+    let lastSuccess: Date?
+    /// The server is logging in (waiting for Touch ID or the password).
+    let isLoggingIn: Bool
+    let logIn: () -> Void
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: problem == .notLoggedIn ? "lock.fill" : "exclamationmark.triangle.fill")
+                .font(.title2)
+                .foregroundStyle(.orange)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.body.weight(.semibold))
+                Text(detail).font(.callout).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 12)
+            if isLoggingIn && problem == .notLoggedIn {
+                ProgressView().controlSize(.small)
+            } else if problem == .notLoggedIn {
+                Button("Log In", action: logIn).buttonStyle(.borderedProminent)
+            } else {
+                Button("Try Again", action: retry)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.orange.opacity(0.4)))
+    }
+
+    private var title: String {
+        switch problem {
+        case .notLoggedIn:
+            return isLoggingIn ? String(localized: "Logging in to Proxmox…") : String(localized: "Not logged in to Proxmox")
+        case .failed:
+            return String(localized: "The values can’t be updated")
+        }
+    }
+
+    private var detail: String {
+        let age = lastSuccess.map {
+            String(localized: "The values shown are from \($0.formatted(date: .omitted, time: .shortened)).")
+        } ?? String(localized: "No values could be loaded yet.")
+        switch problem {
+        case .notLoggedIn where isLoggingIn:
+            return String(localized: "Confirm with Touch ID or enter the password.")
+        case .notLoggedIn:
+            return String(localized: "A Proxmox login expires after two hours without use, for example while the Mac sleeps.") + " " + age
+        case .failed(let message):
+            return message + " " + age
         }
     }
 }
@@ -362,6 +424,8 @@ struct UsageBar: View {
 struct UsageCell: View {
     let fraction: Double?
     let text: String?
+    /// Old values that can't be updated right now are dimmed.
+    var stale = false
 
     var body: some View {
         if let fraction, let text {
@@ -369,6 +433,7 @@ struct UsageCell: View {
                 UsageBar(fraction: fraction).frame(width: 44)
                 Text(text).monospacedDigit().foregroundStyle(.secondary)
             }
+            .opacity(stale ? 0.4 : 1)
         }
     }
 }

@@ -245,6 +245,11 @@ private struct ProxmoxOverview: View {
                 ("Updated", state.lastRefresh.map { $0.formatted(date: .omitted, time: .standard) } ?? "—"),
             ])
 
+            if !state.guests.isEmpty, let problem = state.usageProblem {
+                LiveDataNotice(problem: problem, lastSuccess: state.usageUpdated, isLoggingIn: state.isLoading,
+                               logIn: { Task { await model.proxmox.refresh(item.id) } },
+                               retry: { Task { await model.proxmox.refreshUsage(item.id) } })
+            }
             if !state.guests.isEmpty {
                 Table(state.guests.sorted(using: sortOrder.wrappedValue), selection: $tableSelection,
                       sortOrder: sortOrder) {
@@ -258,12 +263,12 @@ private struct ProxmoxOverview: View {
                     TableColumn("Type", sortUsing: GuestComparator(.type)) { g in Text(g.type.label) }.width(40)
                     TableColumn("Node", sortUsing: GuestComparator(.node)) { g in Text(g.node) }.width(80)
                     TableColumn("CPU", sortUsing: GuestComparator(.cpu, order: .reverse)) { g in
-                        UsageCell(fraction: g.cpu, text: g.cpu.map(MetricUnit.percent.format))
+                        UsageCell(fraction: g.cpu, text: g.cpu.map(MetricUnit.percent.format), stale: state.usageProblem != nil)
                     }
                     .width(100)
                     TableColumn("Memory", sortUsing: GuestComparator(.memory, order: .reverse)) { g in
                         UsageCell(fraction: g.memory.flatMap { used in g.maxMemory.map { $0 > 0 ? used / $0 : 0 } },
-                                  text: g.memory.map(MetricUnit.bytes.format))
+                                  text: g.memory.map(MetricUnit.bytes.format), stale: state.usageProblem != nil)
                     }
                     .width(120)
                     TableColumn("Address", sortUsing: GuestComparator(.address)) { g in

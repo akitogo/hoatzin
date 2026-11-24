@@ -413,7 +413,13 @@
 "How often CPU, memory and the Live graph are updated" = "Wie oft CPU, Arbeitsspeicher und der Live-Graph aktualisiert werden";
 "Proxmox" = "Proxmox";
 "CPU and memory in the guest list, the figures above the graphs and the Live graph follow this. The other graphs come from Proxmox, which keeps at most one value per minute. Updates pause while Hoatzin’s windows can’t be seen." = "CPU und Speicher in der Gästeliste, die Zahlen über den Graphen und der Live-Graph folgen dieser Einstellung. Die übrigen Graphen kommen von Proxmox, das höchstens einen Wert pro Minute speichert. Solange die Fenster von Hoatzin nicht zu sehen sind, pausieren die Abfragen.";
-"Not logged in to this Proxmox server." = "Nicht an diesem Proxmox-Server angemeldet.";
+"Logging in to Proxmox…" = "Anmeldung bei Proxmox …";
+"Not logged in to Proxmox" = "Nicht bei Proxmox angemeldet";
+"The values can’t be updated" = "Die Werte können nicht aktualisiert werden";
+"The values shown are from %@." = "Die angezeigten Werte sind von %@.";
+"No values could be loaded yet." = "Bisher konnten keine Werte geladen werden.";
+"Confirm with Touch ID or enter the password." = "Bestätige mit Touch ID oder gib das Passwort ein.";
+"A Proxmox login expires after two hours without use, for example while the Mac sleeps." = "Eine Proxmox-Anmeldung läuft nach zwei Stunden ohne Nutzung ab, zum Beispiel während der Mac schläft.";
 "Log In" = "Anmelden";
 "CPU" = "CPU";
 "Memory" = "Speicher";
@@ -440,3 +446,4 @@
 "%@, shared" = "%@, gemeinsam genutzt";
 "of %@" = "von %@";
 "%@ of %@" = "%1$@ von %2$@";
+"Try Again" = "Erneut versuchen";

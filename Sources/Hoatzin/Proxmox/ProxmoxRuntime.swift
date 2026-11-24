@@ -57,6 +57,10 @@ final class ProxmoxRuntime {
         var error: String?
         var lastRefresh: Date?
         var loggedInAs: String?
+        /// Why the usage columns couldn't be updated last time; nil after a success.
+        var usageProblem: LiveDataProblem?
+        /// When CPU and memory were last fetched.
+        var usageUpdated: Date?
     }
 
     private(set) var states: [UUID: ServerState] = [:]
@@ -313,6 +317,8 @@ final class ProxmoxRuntime {
         states[serverID]?.guests = guests
         states[serverID]?.error = nil
         states[serverID]?.lastRefresh = Date()
+        states[serverID]?.usageProblem = nil
+        states[serverID]?.usageUpdated = Date()
 
         // Discover addresses (guest agent / LXC interfaces / static config) in the background.
         let targets = guests.filter { !$0.isTemplate }
@@ -340,7 +346,11 @@ final class ProxmoxRuntime {
     /// without a session it throws `notLoggedIn`. A session older than an hour is renewed first,
     /// so graphs that stay open keep working.
     func sessionGet(_ serverID: UUID, _ path: String) async throws -> Any? {
-        if demoServers.contains(serverID) { return DemoMetrics.response(path, state: states[serverID]) }
+        if demoServers.contains(serverID) {
+            // Debug aid: HOATZIN_DEMO_LOGGED_OUT=1 acts as if the login had expired.
+            if ProcessInfo.processInfo.environment["HOATZIN_DEMO_LOGGED_OUT"] != nil { throw ProxmoxError.notLoggedIn }
+            return DemoMetrics.response(path, state: states[serverID])
+        }
         guard let item = library.item(serverID), let client = client(for: item), client.ticket != nil else {
             throw ProxmoxError.notLoggedIn
         }
@@ -359,11 +369,17 @@ final class ProxmoxRuntime {
     }
 
     /// Updates the guests' status and CPU and memory use with one quick call, without asking
-    /// for a login. New or removed guests wait for the next full refresh.
+    /// for a login; when that fails, `usageProblem` says why. New or removed guests wait for
+    /// the next full refresh.
     func refreshUsage(_ serverID: UUID) async {
-        guard let resources = try? await sessionGet(serverID, "/cluster/resources?type=vm") as? [[String: Any]],
-              var guests = states[serverID]?.guests
-        else { return }
+        let resources: [[String: Any]]
+        do {
+            resources = try await sessionGet(serverID, "/cluster/resources?type=vm") as? [[String: Any]] ?? []
+        } catch {
+            if !Task.isCancelled, states[serverID] != nil { states[serverID]?.usageProblem = LiveDataProblem(error) }
+            return
+        }
+        guard var guests = states[serverID]?.guests else { return }
         var entries: [Int: [String: Any]] = [:]
         for entry in resources {
             if let vmid = ProxmoxClient.int(entry["vmid"]) { entries[vmid] = entry }
@@ -372,6 +388,8 @@ final class ProxmoxRuntime {
             if let entry = entries[guests[index].vmid] { guests[index].applyUsage(entry) }
         }
         states[serverID]?.guests = guests
+        states[serverID]?.usageProblem = nil
+        states[serverID]?.usageUpdated = Date()
     }
 
     // MARK: IP discovery

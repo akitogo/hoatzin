@@ -185,6 +185,11 @@ final class GuestSortingTests: XCTestCase {
         XCTAssertEqual(ids(guests, GuestComparator(.address, order: .reverse)), [4, 1, 3, 2])
     }
 
+    func testLiveDataProblemFromErrors() {
+        XCTAssertEqual(LiveDataProblem(ProxmoxError.notLoggedIn), .notLoggedIn)
+        XCTAssertEqual(LiveDataProblem(ProxmoxError.transport("offline")), .failed("offline"))
+    }
+
     func testRawValueRoundTrip() {
         XCTAssertEqual(GuestComparator(rawValue: "cpu:desc"), GuestComparator(.cpu, order: .reverse))
         XCTAssertEqual(GuestComparator(rawValue: "memory:asc").rawValue, "memory:asc")

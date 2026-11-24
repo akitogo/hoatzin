@@ -53,6 +53,21 @@ enum RefreshInterval {
     }
 }
 
+/// Why live values (graphs, usage columns) can't be updated at the moment.
+enum LiveDataProblem: Equatable {
+    /// No valid Proxmox login, e.g. because it expired while the Mac slept.
+    case notLoggedIn
+    case failed(String)
+
+    init(_ error: Error) {
+        if case ProxmoxError.notLoggedIn = error {
+            self = .notLoggedIn
+        } else {
+            self = .failed(error.localizedDescription)
+        }
+    }
+}
+
 enum MetricKey: String, CaseIterable {
     case cpu, iowait, memUsed, memTotal, load, netIn, netOut, diskRead, diskWrite
 }

@@ -37,6 +37,28 @@ iTerm2, Terminal or a built-in terminal tab (based on
   <img src="docs/screenshots/ai-light.png" alt="Hoatzin asking whether Claude may run the command systemctl status nginx on web01, with Deny and Run buttons">
 </picture>
 
+## What Hoatzin is not
+
+Hoatzin is not a tool for managing Proxmox, and it doesn't replace the Proxmox web interface. It
+doesn't create, start, stop, migrate or back up VMs and containers, and it doesn't change their
+settings, storage or the cluster. For that, *Open Web UI* takes you to Proxmox in your browser.
+
+It isn't a monitoring system either. The graphs give you a quick look at how a node or guest is
+doing, but Hoatzin keeps no history of its own, sends no alerts, and only fetches values while a
+page is open.
+
+What Hoatzin is for is getting onto your machines quickly and working there comfortably:
+
+* **Find it fast:** your SSH hosts and every VM and container of your Proxmox servers in one
+  sidebar, with their addresses. Type a few letters in the filter, or ask Spotlight or Siri, and
+  press Return to connect.
+* **A real terminal:** SSH opens in iTerm2, Terminal or a built-in tab instead of a browser
+  console. Copy and paste, scrollback, search, your fonts and your keyboard shortcuts work as
+  usual, and several sessions sit side by side in tabs.
+* **No typing passwords:** they come from the Keychain or the Passwords app, after Touch ID.
+* **A way in when SSH can't help:** the Proxmox console of a VM or container is one click away,
+  for example while it boots or when its network is down.
+
 ## Download
 
 Download `Hoatzin-<version>.zip` from the
@@ -114,7 +136,9 @@ and the launch stops with a message in the terminal. Refusals are logged as
   2 seconds to every minute, or only on request; 10 seconds by default) is set in the menu next to
   the periods or in *Settings → Proxmox*. The figures and the guest list's usage columns follow
   the same setting. Updates run only while the page is shown, and pause while Hoatzin's windows
-  can't be seen.
+  can't be seen. If values can't be updated, for example because the Proxmox login expired while
+  the Mac slept, a note above them says why and since when they're old, with a button to log in
+  again, and the old values are dimmed.
 * **Nothing to install:** the data comes from Proxmox' own API with your Proxmox login. A login
   older than an hour is renewed in the background, so graphs left open don't ask for the
   password again.

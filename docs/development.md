@@ -116,7 +116,8 @@ of releases.
 * `HOATZIN_DEMO_PROXMOX=/path/proxmox.json`: fill Proxmox servers from a file instead of their API
   (see `docs/demo`). Usage, graphs and storage of those servers are made up (`DemoMetrics.swift`).
   `-metricsTimeframe live -proxmoxRefreshInterval 2` on the app's command line opens the graphs
-  in *Live*, updated every 2 seconds.
+  in *Live*, updated every 2 seconds. `HOATZIN_DEMO_LOGGED_OUT=1` makes the demo servers act as
+  if the login had expired, to see what the graphs and the guest list show then.
 * `HOATZIN_SELECT=<entry name>`: select that entry on launch, or else the Proxmox node or guest
   of that name. `HOATZIN_AUTOCONNECT=<entry name>`
   connects to that SSH entry.
