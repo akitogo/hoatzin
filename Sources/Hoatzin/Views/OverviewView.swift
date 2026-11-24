@@ -65,15 +65,15 @@ private struct Page<Content: View>: View {
     }
 }
 
-/// Like `Page`, but without scrolling: its last element (a table) takes the rest of the height
-/// and scrolls by itself.
+/// Like `Page`, but without scrolling and without a width limit: its last element (a table) takes
+/// the rest of the window, so long names and addresses get the room a wide window has, and
+/// scrolls by itself.
 private struct FillingPage<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) { content }
             .padding(24)
-            .frame(maxWidth: 820, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

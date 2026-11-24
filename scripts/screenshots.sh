@@ -40,7 +40,7 @@ shoot() { # <name> <light|dark> <entry to select> [ask]
   HOATZIN_LIBRARY=$PWD/docs/demo/library.json HOATZIN_DEMO_PROXMOX=$PWD/docs/demo/proxmox.json \
   HOATZIN_AI_LOG=$WORK/ai.jsonl HOATZIN_CONTROL_SOCKET=$SOCKET HOATZIN_SELECT=$select \
   HOATZIN_APPEARANCE=$appearance HOATZIN_SNAPSHOT_SIZE=${SIZE:-1240x720} HOATZIN_SNAPSHOT=$WORK/$name HOATZIN_SNAPSHOT_DELAY=6 \
-    "$MACOS/Hoatzin" -AppleLanguages '(en)' -aiAccess commands -spotlightConnections NO -metricsTimeframe hour >"$WORK/$name.log" 2>&1 &
+    "$MACOS/Hoatzin" -AppleLanguages '(en)' -AppleLocale en_US -aiAccess commands -spotlightConnections NO -metricsTimeframe hour -guestSort id:asc >"$WORK/$name.log" 2>&1 &
   local pid=$!
   if [[ -n $ask ]]; then
     sleep 3

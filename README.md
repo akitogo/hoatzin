@@ -311,8 +311,8 @@ Hoatzin's actions are in the Shortcuts app (search for "Hoatzin"):
 
 ## Settings
 
-*Hoatzin → Settings…* chooses where SSH sessions open (iTerm2 by default, Terminal, or the
-built-in tab). New iTerm2 sessions open as tabs in the front window via AppleScript (macOS asks
+*Hoatzin → Settings…* chooses where SSH sessions open (the built-in tab by default, iTerm2 or
+Terminal). New iTerm2 sessions open as tabs in the front window via AppleScript (macOS asks
 once for Automation permission); otherwise iTerm2 opens a new window. *Settings → Proxmox* sets how
 often live values from Proxmox are updated.
 

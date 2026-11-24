@@ -89,7 +89,7 @@ enum Prefs {
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
-            sshOpenIn: TerminalChoice.iterm.isInstalled ? TerminalChoice.iterm.rawValue : TerminalChoice.builtin.rawValue,
+            sshOpenIn: TerminalChoice.builtin.rawValue,
             itermNewTab: true,
             terminalFontSize: 13.0,
             savePasswordsByDefault: true,

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
-    @AppStorage(Prefs.sshOpenIn) private var sshOpenIn = TerminalChoice.iterm.rawValue
+    @AppStorage(Prefs.sshOpenIn) private var sshOpenIn = TerminalChoice.builtin.rawValue
     @AppStorage(Prefs.itermNewTab) private var itermNewTab = true
     @AppStorage(Prefs.savePasswordsByDefault) private var saveByDefault = true
     @AppStorage(Prefs.terminalFontSize) private var fontSize = 13.0
