@@ -55,6 +55,13 @@ final class TerminalSession: Identifiable {
     @ObservationIgnored private var token: String?
     @ObservationIgnored private var startedAt = Date()
     @ObservationIgnored private var delegateBridge: Bridge?
+    @ObservationIgnored private var plan = ReconnectPlan()
+    @ObservationIgnored private var reconnectTask: Task<Void, Never>?
+    @ObservationIgnored private var isClosed = false
+    /// Closes this tab; set by the app, used after a clean logout.
+    @ObservationIgnored var onCleanExit: (() -> Void)?
+    /// When the next automatic reconnect starts; nil while none is waiting.
+    private(set) var reconnectAt: Date?
     @ObservationIgnored let output = OutputClock()
     @ObservationIgnored private(set) lazy var terminalView: LocalProcessTerminalView = makeView()
     /// The terminal inside a small margin, like other terminal apps.
@@ -74,6 +81,9 @@ final class TerminalSession: Identifiable {
 
     func start() {
         guard state != .running else { return }
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        reconnectAt = nil
         let agent = SSHAuthAgent(target: target, owner: id, preResolved: preResolved, broker: broker, prompts: prompts)
         preResolved = nil
         self.agent = agent
@@ -87,14 +97,14 @@ final class TerminalSession: Identifiable {
         for (key, value) in AskpassServer.shared.environment(token: token) { env[key] = value }
 
         let view = terminalView
-        if state != .idle {
-            view.feed(text: "\r\n\u{1B}[2m— \(String(localized: "reconnecting to \(target.userAtHost)")) —\u{1B}[0m\r\n")
-        }
+        if state != .idle { note(String(localized: "reconnecting to \(target.userAtHost)")) }
         startedAt = Date()
         state = .running
+        // While reconnecting, a host that's still down should fail fast instead of after a minute.
+        let retrying = plan.isActive ? ["-o", "ConnectTimeout=\(ReconnectPlan.connectTimeout)"] : []
         view.startProcess(
             executable: "/usr/bin/ssh",
-            args: target.sshArguments,
+            args: retrying + target.sshArguments,
             environment: env.map { "\($0.key)=\($0.value)" },
             execName: "ssh"
         )
@@ -106,8 +116,24 @@ final class TerminalSession: Identifiable {
     }
 
     func terminate() {
+        isClosed = true
+        cancelReconnect()
         if state == .running { terminalView.terminate() }
         cleanup(exitCode: nil)
+    }
+
+    /// Stops a round of automatic reconnects; the tab stays as it is.
+    func stopReconnecting() {
+        guard plan.isActive || reconnectAt != nil else { return }
+        cancelReconnect()
+        note(String(localized: "stopped reconnecting"))
+    }
+
+    private func cancelReconnect() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        reconnectAt = nil
+        plan.cancel()
     }
 
     func focus() {
@@ -140,10 +166,45 @@ final class TerminalSession: Identifiable {
     }
 
     fileprivate func processEnded(exitCode: Int32?) {
+        let ranFor = Date().timeIntervalSince(startedAt)
         cleanup(exitCode: exitCode)
         state = .exited(exitCode)
-        let closed = exitCode.map { String(localized: "connection closed (exit \(Int($0)))") } ?? String(localized: "connection closed")
-        terminalView.feed(text: "\r\n\u{1B}[2m— \(closed) —\u{1B}[0m\r\n")
+        guard !isClosed else { return }
+
+        // ssh's own message is in the last lines, before anything is added below.
+        let ending = SSHExit.classify(exitCode: exitCode, lastLines: AIBridge.lastLines(of: terminalView.getBufferAsData(), count: 2))
+        let defaults = UserDefaults.standard
+        let step = plan.next(after: ending, ranFor: ranFor,
+                             closeOnClean: defaults.bool(forKey: Prefs.closeTabOnCleanExit) && onCleanExit != nil,
+                             autoReconnect: defaults.bool(forKey: Prefs.autoReconnect))
+        let code = Int(exitCode ?? -1)
+        switch step {
+        case .closeTab:
+            onCleanExit?()
+        case .retry(let attempt, let delay):
+            note(attempt == 1
+                 ? String(localized: "connection lost (exit \(code)), reconnecting in \(Int(delay)) s")
+                 : String(localized: "trying again in \(Int(delay)) s"))
+            scheduleReconnect(after: delay)
+        case .gaveUp:
+            note(String(localized: "connection closed (exit \(code)), stopped reconnecting after 5 minutes"))
+        case .stay:
+            note(exitCode.map { String(localized: "connection closed (exit \(Int($0)))") } ?? String(localized: "connection closed"))
+        }
+    }
+
+    private func scheduleReconnect(after delay: TimeInterval) {
+        reconnectAt = Date().addingTimeInterval(delay)
+        reconnectTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self, self.reconnectAt != nil, !self.isClosed else { return }
+            self.start()
+        }
+    }
+
+    /// A dimmed line from Hoatzin in the terminal, between ssh's output.
+    private func note(_ text: String) {
+        terminalView.feed(text: "\r\n\u{1B}[2m— \(text) —\u{1B}[0m\r\n")
     }
 
     private func cleanup(exitCode: Int32?) {

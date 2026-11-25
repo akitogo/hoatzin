@@ -104,7 +104,14 @@ struct SessionBar: View {
                 Image(systemName: "terminal").foregroundStyle(.secondary)
                 Text("ssh \(s.target.userAtHost)").font(.system(.callout, design: .monospaced))
                 Spacer()
-                if case .exited(let code) = s.state {
+                if let at = s.reconnectAt {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text("Reconnecting in \(max(0, Int(at.timeIntervalSince(context.date).rounded(.up)))) s")
+                            .foregroundStyle(.secondary).font(.callout).monospacedDigit()
+                    }
+                    Button("Cancel") { s.stopReconnecting() }
+                    Button("Connect Now") { model.reconnect(s.id) }.keyboardShortcut("r", modifiers: [.command, .shift])
+                } else if case .exited(let code) = s.state {
                     Text(code.map { String(localized: "closed (exit \(Int($0)))") } ?? String(localized: "closed")).foregroundStyle(.secondary).font(.callout)
                     Button("Reconnect") { model.reconnect(s.id) }.keyboardShortcut("r", modifiers: [.command, .shift])
                 }

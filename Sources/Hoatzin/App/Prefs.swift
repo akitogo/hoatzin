@@ -80,12 +80,16 @@ enum Prefs {
     static let metricsTimeframe = "metricsTimeframe"
     /// GuestComparator raw value: the column the guest list is sorted by, e.g. "cpu:desc".
     static let guestSort = "guestSort"
+    /// Close a built-in SSH tab when ssh ends with exit code 0 (exit, Control-D).
+    static let closeTabOnCleanExit = "closeTabOnCleanExit"
+    /// Reconnect a built-in SSH tab whose connection dropped (server restart, network, sleep).
+    static let autoReconnect = "autoReconnect"
 
     /// Every setting the user can change (also what the move from RemoteDeck copies).
     static let all = [sshOpenIn, itermNewTab, terminalFontSize, savePasswordsByDefault, defaultSSHUser, defaultSSHAuth,
                       defaultSSHKeyFile, requireTouchID, touchIDGracePeriod, aiAccess, aiReadOutput, runCommandAction,
                       spotlightConnections, addressTruncation, iCloudSync, proxmoxRefreshInterval, metricsTimeframe,
-                      guestSort, "sidebarCollapsed"]
+                      guestSort, closeTabOnCleanExit, autoReconnect, "sidebarCollapsed"]
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -107,6 +111,8 @@ enum Prefs {
             proxmoxRefreshInterval: 10.0,
             metricsTimeframe: MetricsTimeframe.hour.rawValue,
             guestSort: "id:asc",
+            closeTabOnCleanExit: true,
+            autoReconnect: true,
         ])
     }
 

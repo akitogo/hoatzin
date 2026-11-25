@@ -260,7 +260,8 @@ final class AIBridge {
             switch s.state {
             case .idle: state = "starting"
             case .running: state = "running"
-            case .exited(let code): state = "closed" + (code.map { " (exit \($0))" } ?? "")
+            case .exited(let code):
+                state = "closed" + (code.map { " (exit \($0))" } ?? "") + (s.reconnectAt == nil ? "" : ", reconnecting automatically")
             }
             return ("ssh", s.target.userAtHost, state)
         case .console(let s):

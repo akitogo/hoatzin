@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @AppStorage(Prefs.sshOpenIn) private var sshOpenIn = TerminalChoice.builtin.rawValue
+    @AppStorage(Prefs.closeTabOnCleanExit) private var closeTabOnCleanExit = true
+    @AppStorage(Prefs.autoReconnect) private var autoReconnect = true
     @AppStorage(Prefs.itermNewTab) private var itermNewTab = true
     @AppStorage(Prefs.savePasswordsByDefault) private var saveByDefault = true
     @AppStorage(Prefs.terminalFontSize) private var fontSize = 13.0
@@ -38,6 +40,10 @@ struct SettingsView: View {
                     .onChange(of: fontSize) { _, size in
                         for case .terminal(let session) in model.sessions { session.applyFontSize(size) }
                     }
+                Toggle("Built-in tab: close after a clean logout", isOn: $closeTabOnCleanExit)
+                Toggle("Built-in tab: reconnect when the connection drops", isOn: $autoReconnect)
+                Text("A clean logout is exit or Control-D, when ssh ends with exit code 0; after an error the tab stays open so you can read it. After a dropped connection (server restart, network gone, Mac asleep), Hoatzin tries again every few seconds for up to 5 minutes.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Sidebar") {
                 Picker("Shorten long addresses", selection: $addressTruncation) {

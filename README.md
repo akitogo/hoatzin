@@ -316,8 +316,10 @@ Hoatzin's actions are in the Shortcuts app (search for "Hoatzin"):
 
 *Hoatzin → Settings…* chooses where SSH sessions open (the built-in tab by default, iTerm2 or
 Terminal). New iTerm2 sessions open as tabs in the front window via AppleScript (macOS asks
-once for Automation permission); otherwise iTerm2 opens a new window. *Settings → Proxmox* sets how
-often live values from Proxmox are updated.
+once for Automation permission); otherwise iTerm2 opens a new window. A built-in tab closes after a
+clean logout (exit code 0) and, when the connection drops because the server restarts or the network
+goes away, reconnects by itself for up to 5 minutes; both can be switched off. *Settings → Proxmox*
+sets how often live values from Proxmox are updated.
 
 ## Building from source
 

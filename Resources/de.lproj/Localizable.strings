@@ -63,6 +63,12 @@
 "connection closed (exit %lld)" = "Verbindung beendet (Exit-Code %lld)";
 "reconnecting to %@" = "verbinde neu mit %@";
 "connection closed" = "Verbindung beendet";
+"connection lost (exit %lld), reconnecting in %lld s" = "Verbindung verloren (Exit-Code %lld), verbinde in %lld s neu";
+"trying again in %lld s" = "nächster Versuch in %lld s";
+"connection closed (exit %lld), stopped reconnecting after 5 minutes" = "Verbindung beendet (Exit-Code %lld), nach 5 Minuten nicht mehr neu verbunden";
+"stopped reconnecting" = "Neu verbinden abgebrochen";
+"Reconnecting in %lld s" = "Neu verbinden in %lld s";
+"Connect Now" = "Jetzt verbinden";
 "%@ (console)" = "%@ (Konsole)";
 "%@ shell" = "%@-Shell";
 
@@ -224,6 +230,9 @@
 "iTerm2: open as a new tab in the front window" = "iTerm2: als neuen Tab im vorderen Fenster öffnen";
 "New tabs are created via AppleScript; macOS asks once to allow Hoatzin to control iTerm2. Without it, each session opens in a new iTerm2 window." = "Neue Tabs werden per AppleScript angelegt. macOS fragt einmal, ob Hoatzin iTerm2 steuern darf. Ohne diese Erlaubnis öffnet sich jede Sitzung in einem neuen iTerm2-Fenster.";
 "Built-in terminal font size: %lld" = "Schriftgröße im integrierten Terminal: %lld";
+"Built-in tab: close after a clean logout" = "Integrierter Tab: nach sauberem Abmelden schließen";
+"Built-in tab: reconnect when the connection drops" = "Integrierter Tab: bei Verbindungsabbruch neu verbinden";
+"A clean logout is exit or Control-D, when ssh ends with exit code 0; after an error the tab stays open so you can read it. After a dropped connection (server restart, network gone, Mac asleep), Hoatzin tries again every few seconds for up to 5 minutes." = "Sauber abgemeldet hast du dich mit exit oder Control-D, wenn ssh mit Exit-Code 0 endet. Nach einem Fehler bleibt der Tab offen, damit du ihn lesen kannst. Bricht die Verbindung ab (Neustart des Servers, Netzwerk weg, Mac im Ruhezustand), versucht Hoatzin es bis zu 5 Minuten lang alle paar Sekunden erneut.";
 "Shorten long addresses" = "Lange Adressen kürzen";
 "At the start (…30.20)" = "Am Anfang (…30.20)";
 "At the end (10.20.3…)" = "Am Ende (10.20.3…)";

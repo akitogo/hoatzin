@@ -302,6 +302,8 @@ final class AppModel {
     private func open(_ target: SSHTarget, in choice: TerminalChoice, preResolved: ResolvedCredential?) -> UUID? {
         if choice == .builtin {
             let session = TerminalSession(target: target, preResolved: preResolved, broker: broker, prompts: prompts)
+            let id = session.id
+            session.onCleanExit = { [weak self] in self?.closeSession(id) }
             sessions.append(.terminal(session))
             selectedSessionID = session.id
             session.start()
