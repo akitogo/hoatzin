@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "hoatzin-mcp", targets: ["hoatzin-mcp"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.99.4"),
     ],
     targets: [
         .executableTarget(
