@@ -3,29 +3,29 @@ import Foundation
 /// Sorting of the guest list on a Proxmox server's page, by the clicked column. Guests without a
 /// value (stopped ones for CPU and memory, ones without an address) stay at the end in both
 /// directions; equal values keep the order by ID.
-struct GuestComparator: SortComparator, Hashable {
-    enum Field: String, CaseIterable {
+public struct GuestComparator: SortComparator, Hashable {
+    public enum Field: String, CaseIterable {
         case status, id, name, type, node, cpu, memory, address
     }
 
-    var field: Field
-    var order: SortOrder = .forward
+    public var field: Field
+    public var order: SortOrder = .forward
 
     /// As stored in the settings, e.g. "cpu:desc".
-    var rawValue: String { "\(field.rawValue):\(order == .forward ? "asc" : "desc")" }
+    public var rawValue: String { "\(field.rawValue):\(order == .forward ? "asc" : "desc")" }
 
-    init(_ field: Field, order: SortOrder = .forward) {
+    public init(_ field: Field, order: SortOrder = .forward) {
         self.field = field
         self.order = order
     }
 
-    init(rawValue: String) {
+    public init(rawValue: String) {
         let parts = rawValue.split(separator: ":").map(String.init)
         field = parts.first.flatMap(Field.init) ?? .id
         order = parts.count > 1 && parts[1] == "desc" ? .reverse : .forward
     }
 
-    func compare(_ lhs: PVEGuest, _ rhs: PVEGuest) -> ComparisonResult {
+    public func compare(_ lhs: PVEGuest, _ rhs: PVEGuest) -> ComparisonResult {
         let result: ComparisonResult
         switch field {
         case .status: result = Self.compare(lhs.isRunning ? 0 : 1, rhs.isRunning ? 0 : 1)
@@ -65,11 +65,11 @@ struct GuestComparator: SortComparator, Hashable {
     }
 
     /// IPv4 addresses by their numbers (10.0.0.9 before 10.0.0.10), others after them as text.
-    struct AddressKey: Comparable {
-        let octets: [Int]?
-        let text: String
+    public struct AddressKey: Comparable {
+        public let octets: [Int]?
+        public let text: String
 
-        static func < (lhs: AddressKey, rhs: AddressKey) -> Bool {
+        public static func < (lhs: AddressKey, rhs: AddressKey) -> Bool {
             switch (lhs.octets, rhs.octets) {
             case let (a?, b?): return a.lexicographicallyPrecedes(b)
             case (.some, nil): return true
@@ -79,7 +79,7 @@ struct GuestComparator: SortComparator, Hashable {
         }
     }
 
-    static func addressKey(_ address: String) -> AddressKey {
+    public static func addressKey(_ address: String) -> AddressKey {
         let parts = address.split(separator: ".", omittingEmptySubsequences: false).compactMap { Int($0) }
         return AddressKey(octets: parts.count == 4 ? parts : nil, text: address)
     }

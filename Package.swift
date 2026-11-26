@@ -3,8 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "Hoatzin",
-    platforms: [.macOS(.v14)],
+    // iOS only for HoatzinCore: the code a future iOS app shares with the Mac app.
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
+        .library(name: "HoatzinCore", targets: ["HoatzinCore"]),
         .executable(name: "Hoatzin", targets: ["Hoatzin"]),
         .executable(name: "hoatzin-askpass", targets: ["hoatzin-askpass"]),
         .executable(name: "hoatzin-mcp", targets: ["hoatzin-mcp"]),
@@ -13,9 +15,14 @@ let package = Package(
         .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.99.4"),
     ],
     targets: [
+        // Library model, iCloud sync, Proxmox API and Keychain: no AppKit, builds for iOS too.
+        .target(
+            name: "HoatzinCore",
+            path: "Sources/HoatzinCore"
+        ),
         .executableTarget(
             name: "Hoatzin",
-            dependencies: [.product(name: "SwiftTerm", package: "SwiftTerm")],
+            dependencies: ["HoatzinCore", .product(name: "SwiftTerm", package: "SwiftTerm")],
             path: "Sources/Hoatzin"
         ),
         .executableTarget(
@@ -28,7 +35,7 @@ let package = Package(
         ),
         .testTarget(
             name: "HoatzinTests",
-            dependencies: ["Hoatzin", "hoatzin-askpass", "hoatzin-mcp"],
+            dependencies: ["HoatzinCore", "Hoatzin", "hoatzin-askpass", "hoatzin-mcp"],
             path: "Tests/HoatzinTests"
         ),
     ],

@@ -7,18 +7,18 @@ import Observation
 // It must never contain a secret: passwords, passphrases and tickets live only in the
 // macOS Keychain or in memory.
 
-enum ItemKind: String, Codable {
+public enum ItemKind: String, Codable {
     case folder, ssh, proxmox
 }
 
-enum SSHAuthMode: String, Codable, CaseIterable, Identifiable {
+public enum SSHAuthMode: String, Codable, CaseIterable, Identifiable {
     /// Password from the Keychain; asked (with Passwords AutoFill) before connecting if missing.
     case password
     /// Key file / ssh-agent. A password is only asked for if the server falls back to it.
     case key
 
-    var id: String { rawValue }
-    var label: String {
+    public var id: String { rawValue }
+    public var label: String {
         switch self {
         case .password: return String(localized: "Password (Keychain / Passwords)")
         case .key: return String(localized: "SSH key / agent")
@@ -26,118 +26,163 @@ enum SSHAuthMode: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-struct SSHConfig: Codable, Hashable {
-    var host: String = ""
-    var port: Int = 22
-    var username: String = "root"
-    var auth: SSHAuthMode = .password
-    var identityFile: String = ""
+public struct SSHConfig: Codable, Hashable {
+    public var host: String = ""
+    public var port: Int = 22
+    public var username: String = "root"
+    public var auth: SSHAuthMode = .password
+    public var identityFile: String = ""
     /// Host name the password is filed under in the Keychain. Empty = `host`.
-    var keychainHost: String = ""
+    public var keychainHost: String = ""
     /// Additional raw ssh arguments, e.g. "-A -J jump@bastion".
-    var extraArgs: String = ""
+    public var extraArgs: String = ""
 
-    var effectiveKeychainHost: String {
+    public init(host: String = "", port: Int = 22, username: String = "root", auth: SSHAuthMode = .password, identityFile: String = "", keychainHost: String = "", extraArgs: String = "") {
+        self.host = host
+        self.port = port
+        self.username = username
+        self.auth = auth
+        self.identityFile = identityFile
+        self.keychainHost = keychainHost
+        self.extraArgs = extraArgs
+    }
+
+    public var effectiveKeychainHost: String {
         let trimmed = keychainHost.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? host : trimmed
     }
 }
 
-struct GuestOverride: Codable, Hashable {
-    var sshHost: String = ""
-    var sshUser: String = ""
-    var sshPort: Int? = nil
-    var keychainHost: String = ""
+public struct GuestOverride: Codable, Hashable {
+    public var sshHost: String = ""
+    public var sshUser: String = ""
+    public var sshPort: Int? = nil
+    public var keychainHost: String = ""
     /// nil = the server's / app's default.
-    var sshAuth: SSHAuthMode? = nil
+    public var sshAuth: SSHAuthMode? = nil
+
+    public init(sshHost: String = "", sshUser: String = "", sshPort: Int? = nil, keychainHost: String = "", sshAuth: SSHAuthMode? = nil) {
+        self.sshHost = sshHost
+        self.sshUser = sshUser
+        self.sshPort = sshPort
+        self.keychainHost = keychainHost
+        self.sshAuth = sshAuth
+    }
 }
 
-struct ProxmoxConfig: Codable, Hashable {
-    var host: String = ""
-    var port: Int = 8006
-    var username: String = "root"
-    var realm: String = "pam"
+public struct ProxmoxConfig: Codable, Hashable {
+    public var host: String = ""
+    public var port: Int = 8006
+    public var username: String = "root"
+    public var realm: String = "pam"
     /// Host name the Proxmox password is filed under in the Keychain. Empty = `host`.
-    var keychainHost: String = ""
+    public var keychainHost: String = ""
     /// SHA-256 fingerprint of the accepted (usually self-signed) certificate.
-    var pinnedSHA256: String? = nil
+    public var pinnedSHA256: String? = nil
 
     // SSH into guests discovered on this server. Empty / nil = the app-wide defaults (Settings).
     // Node shells / SSH to the nodes themselves use the Proxmox login user instead.
-    var sshUsername: String = ""
-    var sshAuth: SSHAuthMode? = nil
-    var sshIdentityFile: String = ""
+    public var sshUsername: String = ""
+    public var sshAuth: SSHAuthMode? = nil
+    public var sshIdentityFile: String = ""
 
     /// Per-guest SSH settings, keyed by VMID.
-    var guestOverrides: [String: GuestOverride] = [:]
+    public var guestOverrides: [String: GuestOverride] = [:]
+
+    public init(host: String = "", port: Int = 8006, username: String = "root", realm: String = "pam", keychainHost: String = "", pinnedSHA256: String? = nil, sshUsername: String = "", sshAuth: SSHAuthMode? = nil, sshIdentityFile: String = "", guestOverrides: [String: GuestOverride] = [:]) {
+        self.host = host
+        self.port = port
+        self.username = username
+        self.realm = realm
+        self.keychainHost = keychainHost
+        self.pinnedSHA256 = pinnedSHA256
+        self.sshUsername = sshUsername
+        self.sshAuth = sshAuth
+        self.sshIdentityFile = sshIdentityFile
+        self.guestOverrides = guestOverrides
+    }
 
     /// Linux user of the Proxmox login ("root" for root@pam).
-    var loginUser: String {
+    public var loginUser: String {
         String(username.split(separator: "@").first ?? Substring(username))
     }
 
-    var apiUser: String {
+    public var apiUser: String {
         username.contains("@") ? username : "\(username)@\(realm)"
     }
 
-    var effectiveKeychainHost: String {
+    public var effectiveKeychainHost: String {
         let trimmed = keychainHost.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? host : trimmed
     }
 }
 
-struct LibraryItem: Identifiable, Codable, Hashable {
-    var id: UUID = UUID()
-    var kind: ItemKind
-    var name: String
-    var children: [LibraryItem] = []
-    var ssh: SSHConfig? = nil
-    var proxmox: ProxmoxConfig? = nil
+public struct LibraryItem: Identifiable, Codable, Hashable {
+    public var id: UUID = UUID()
+    public var kind: ItemKind
+    public var name: String
+    public var children: [LibraryItem] = []
+    public var ssh: SSHConfig? = nil
+    public var proxmox: ProxmoxConfig? = nil
 
-    static func folder(_ name: String) -> LibraryItem {
+    public init(id: UUID = UUID(), kind: ItemKind, name: String, children: [LibraryItem] = [], ssh: SSHConfig? = nil, proxmox: ProxmoxConfig? = nil) {
+        self.id = id
+        self.kind = kind
+        self.name = name
+        self.children = children
+        self.ssh = ssh
+        self.proxmox = proxmox
+    }
+
+    public static func folder(_ name: String) -> LibraryItem {
         LibraryItem(kind: .folder, name: name)
     }
 
-    static func sshConnection(_ name: String, config: SSHConfig = SSHConfig()) -> LibraryItem {
+    public static func sshConnection(_ name: String, config: SSHConfig = SSHConfig()) -> LibraryItem {
         LibraryItem(kind: .ssh, name: name, ssh: config)
     }
 
-    static func proxmoxServer(_ name: String, config: ProxmoxConfig = ProxmoxConfig()) -> LibraryItem {
+    public static func proxmoxServer(_ name: String, config: ProxmoxConfig = ProxmoxConfig()) -> LibraryItem {
         LibraryItem(kind: .proxmox, name: name, proxmox: config)
     }
 }
 
 /// The file format of library.json, also what iCloud sync stores (see `LibrarySync`).
-struct LibraryFile: Codable {
-    static let currentVersion = 2
-    var version: Int = LibraryFile.currentVersion
-    var items: [LibraryItem]
+public struct LibraryFile: Codable {
+    public static let currentVersion = 2
+    public var version: Int = LibraryFile.currentVersion
+    public var items: [LibraryItem]
+
+    public init(version: Int = LibraryFile.currentVersion, items: [LibraryItem]) {
+        self.version = version
+        self.items = items
+    }
 }
 
 // MARK: - Store
 
 @MainActor
 @Observable
-final class LibraryStore {
-    private(set) var items: [LibraryItem] = []
-    var loadError: String?
+public final class LibraryStore {
+    public private(set) var items: [LibraryItem] = []
+    public var loadError: String?
     /// Called after each change made in this app (not after `replaceAll`), e.g. to sync it.
-    @ObservationIgnored var onChange: (() -> Void)?
+    @ObservationIgnored public var onChange: (() -> Void)?
 
-    let fileURL: URL
+    public let fileURL: URL
 
-    nonisolated static var defaultURL: URL {
+    public nonisolated static var defaultURL: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return support.appendingPathComponent("Hoatzin", isDirectory: true).appendingPathComponent("library.json")
     }
 
-    init(fileURL: URL = LibraryStore.defaultURL) {
+    public init(fileURL: URL = LibraryStore.defaultURL) {
         self.fileURL = fileURL
         try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         load()
     }
 
-    func load() {
+    public func load() {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
             let data = try Data(contentsOf: fileURL)
@@ -154,7 +199,7 @@ final class LibraryStore {
 
     /// v1 stored "root"/password as fixed guest SSH settings; untouched values now mean
     /// "use the app-wide default".
-    nonisolated static func migrate(_ list: [LibraryItem], from version: Int) -> [LibraryItem] {
+    public nonisolated static func migrate(_ list: [LibraryItem], from version: Int) -> [LibraryItem] {
         list.map { item in
             var item = item
             item.children = migrate(item.children, from: version)
@@ -169,7 +214,7 @@ final class LibraryStore {
     }
 
     /// Replaces the whole library, e.g. with the one from iCloud. Does not call `onChange`.
-    func replaceAll(_ newItems: [LibraryItem]) {
+    public func replaceAll(_ newItems: [LibraryItem]) {
         items = newItems
         write()
     }
@@ -192,7 +237,7 @@ final class LibraryStore {
 
     // MARK: Queries
 
-    func item(_ id: UUID) -> LibraryItem? {
+    public func item(_ id: UUID) -> LibraryItem? {
         Self.find(id, in: items)
     }
 
@@ -204,7 +249,7 @@ final class LibraryStore {
         return nil
     }
 
-    func parentID(of id: UUID) -> UUID? {
+    public func parentID(of id: UUID) -> UUID? {
         func search(_ list: [LibraryItem], parent: UUID?) -> UUID?? {
             for item in list {
                 if item.id == id { return .some(parent) }
@@ -216,7 +261,7 @@ final class LibraryStore {
     }
 
     /// All folders as (id, "Parent / Child") for pickers.
-    var folderPaths: [(id: UUID, path: String)] {
+    public var folderPaths: [(id: UUID, path: String)] {
         var out: [(UUID, String)] = []
         func walk(_ list: [LibraryItem], prefix: String) {
             for item in list where item.kind == .folder {
@@ -229,7 +274,7 @@ final class LibraryStore {
         return out.map { (id: $0.0, path: $0.1) }
     }
 
-    var proxmoxServers: [LibraryItem] {
+    public var proxmoxServers: [LibraryItem] {
         var out: [LibraryItem] = []
         func walk(_ list: [LibraryItem]) {
             for item in list {
@@ -243,7 +288,7 @@ final class LibraryStore {
 
     // MARK: Mutations
 
-    func add(_ item: LibraryItem, to folderID: UUID?) {
+    public func add(_ item: LibraryItem, to folderID: UUID?) {
         if let folderID, Self.mutate(folderID, in: &items, { $0.children.append(item) }) {
             // added to folder
         } else {
@@ -252,7 +297,7 @@ final class LibraryStore {
         save()
     }
 
-    func update(_ item: LibraryItem) {
+    public func update(_ item: LibraryItem) {
         _ = Self.mutate(item.id, in: &items) { existing in
             let children = existing.children
             existing = item
@@ -261,17 +306,17 @@ final class LibraryStore {
         save()
     }
 
-    func modify(_ id: UUID, _ change: (inout LibraryItem) -> Void) {
+    public func modify(_ id: UUID, _ change: (inout LibraryItem) -> Void) {
         _ = Self.mutate(id, in: &items, change)
         save()
     }
 
-    func remove(_ id: UUID) {
+    public func remove(_ id: UUID) {
         _ = Self.detach(id, from: &items)
         save()
     }
 
-    func duplicate(_ id: UUID) {
+    public func duplicate(_ id: UUID) {
         guard var copy = item(id), copy.kind != .folder else { return }
         copy.id = UUID()
         copy.name = String(localized: "\(copy.name) copy")
@@ -279,7 +324,7 @@ final class LibraryStore {
     }
 
     /// Moves `id` into `folderID` (nil = top level) at `index` (nil = end).
-    func move(_ id: UUID, to folderID: UUID?, index: Int?) {
+    public func move(_ id: UUID, to folderID: UUID?, index: Int?) {
         guard id != folderID else { return }
         // Refuse to move a folder into its own subtree.
         if let folderID, let moving = item(id), Self.find(folderID, in: moving.children) != nil { return }

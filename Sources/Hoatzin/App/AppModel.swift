@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import HoatzinCore
 
 enum SidebarID: Hashable {
     case item(UUID)
@@ -135,8 +136,9 @@ final class AppModel {
         self.library = library
         self.prompts = prompts
         self.broker = broker
-        self.proxmox = ProxmoxRuntime(library: library, broker: broker, prompts: prompts)
+        self.proxmox = ProxmoxRuntime(library: library, loginHandler: broker)
         self.sync = LibrarySync(library: library)
+        sync.chooseFirstSync = FirstSyncAlert.ask
         broker.onError = { [weak self] message in self?.alertMessage = message }
         alertMessage = library.loadError
         let logURL = activityLogURL

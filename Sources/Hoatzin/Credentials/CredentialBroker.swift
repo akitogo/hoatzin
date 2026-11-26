@@ -1,11 +1,5 @@
 import Foundation
-
-struct ResolvedCredential: Sendable {
-    var key: CredentialKey
-    var secret: String
-    var fromKeychain: Bool
-    var shouldSave: Bool
-}
+import HoatzinCore
 
 /// Finds the secret for a connection:
 ///  1. the Keychain item filed under (server, account, protocol), if present, after a
@@ -94,5 +88,25 @@ final class CredentialBroker {
 
     static func hasKeychainItem(_ key: CredentialKey) async -> Bool {
         await Task.detached { Keychain.exists(key) }.value
+    }
+}
+
+/// Proxmox logins (HoatzinCore) ask through the broker: the Keychain after Touch ID, else a sheet.
+extension CredentialBroker: ProxmoxLoginHandler {
+    func credential(for key: CredentialKey, title: String, message: String, forcePrompt: Bool, isRetry: Bool) async -> ResolvedCredential? {
+        await resolve(key, title: title, message: message, forcePrompt: forcePrompt, isRetry: isRetry)
+    }
+
+    func loginSucceeded(with credential: ResolvedCredential) async {
+        await commit(credential)
+    }
+
+    func oneTimeCode(title: String, message: String) async -> String? {
+        await prompts.askText(TextPrompt(title: title, message: message, placeholder: "123456", secure: false))
+    }
+
+    func trustCertificate(title: String, message: String, fingerprint: String, changed: Bool) async -> Bool {
+        await prompts.confirm(ConfirmPrompt(title: title, message: message, detail: "SHA-256\n\(fingerprint)",
+                                            confirmTitle: String(localized: "Trust"), destructive: changed))
     }
 }

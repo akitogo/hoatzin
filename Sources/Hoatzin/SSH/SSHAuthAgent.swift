@@ -1,4 +1,5 @@
 import Foundation
+import HoatzinCore
 
 /// Answers ssh's askpass questions for one ssh process.
 ///

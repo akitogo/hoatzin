@@ -1,4 +1,5 @@
 import AppKit
+import HoatzinCore
 
 enum TerminalChoice: String, CaseIterable, Identifiable {
     case iterm, terminal, builtin
@@ -73,7 +74,7 @@ enum Prefs {
     /// AddressTruncation raw value: where long addresses in the sidebar are shortened.
     static let addressTruncation = "addressTruncation"
     /// Sync the library through iCloud (see LibrarySync).
-    static let iCloudSync = "iCloudSync"
+    static let iCloudSync = LibrarySync.enabledKey
     /// Seconds between updates of Proxmox live values (graphs, usage columns); 0 = manually.
     static let proxmoxRefreshInterval = "proxmoxRefreshInterval"
     /// MetricsTimeframe raw value last chosen for the graphs.

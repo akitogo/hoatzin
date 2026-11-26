@@ -1,4 +1,5 @@
 import AppKit
+import HoatzinCore
 
 /// Starts ssh in iTerm2 or Terminal.app.
 ///

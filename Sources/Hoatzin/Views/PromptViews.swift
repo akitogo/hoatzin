@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import HoatzinCore
 
 struct PromptSheet: View {
     let pending: PromptCenter.Pending

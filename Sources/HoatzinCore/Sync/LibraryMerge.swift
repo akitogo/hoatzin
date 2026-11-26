@@ -8,8 +8,8 @@ import Foundation
 /// * When both sides changed the same thing, `remote` (iCloud) wins.
 /// * A deletion loses against a change on the other side, so no edit is lost. A deleted folder
 ///   comes back if the other side put something new into it or changed something in it.
-enum LibraryMerge {
-    static func merge(base: [LibraryItem], local: [LibraryItem], remote: [LibraryItem]) -> [LibraryItem] {
+public enum LibraryMerge {
+    public static func merge(base: [LibraryItem], local: [LibraryItem], remote: [LibraryItem]) -> [LibraryItem] {
         let b = Flat(base), l = Flat(local), r = Flat(remote)
         var content: [UUID: LibraryItem] = [:]
         var parent: [UUID: UUID?] = [:]

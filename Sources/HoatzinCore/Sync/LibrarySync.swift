@@ -1,8 +1,12 @@
-import AppKit
 import CloudKit
 import Observation
 import Security
+#if os(macOS)
+import AppKit
 import SystemConfiguration
+#else
+import UIKit
+#endif
 
 /// Keeps the library the same on all Macs signed in to the same iCloud account.
 ///
@@ -20,8 +24,8 @@ import SystemConfiguration
 /// a zone of its own (HOATZIN_SYNC_ZONE), so tests and demos never reach the real library.
 @MainActor
 @Observable
-final class LibrarySync {
-    enum Status: Equatable {
+public final class LibrarySync {
+    public enum Status: Equatable {
         case off
         case unavailable(String)
         case syncing
@@ -30,24 +34,33 @@ final class LibrarySync {
     }
 
     /// What one sync does: replace this Mac's library, replace the one in iCloud, or ask first.
-    struct Plan: Equatable {
-        var download: [LibraryItem]? = nil
-        var upload: [LibraryItem]? = nil
-        var needsChoice = false
+    public struct Plan: Equatable {
+        public var download: [LibraryItem]? = nil
+        public var upload: [LibraryItem]? = nil
+        public var needsChoice = false
+
+        public init(download: [LibraryItem]? = nil, upload: [LibraryItem]? = nil, needsChoice: Bool = false) {
+            self.download = download
+            self.upload = upload
+            self.needsChoice = needsChoice
+        }
     }
 
-    enum FirstSyncChoice: String { case merge, useICloud, useThisMac }
+    public enum FirstSyncChoice: String { case merge, useICloud, useThisMac }
 
-    nonisolated static let containerID = "iCloud.com.akitogo.Hoatzin"
-    nonisolated static let recordType = "Library"
-    nonisolated static let defaultZone = "Library"
+    public nonisolated static let containerID = "iCloud.com.akitogo.Hoatzin"
+    public nonisolated static let recordType = "Library"
+    public nonisolated static let defaultZone = "Library"
+    /// UserDefaults key of the setting that turns sync on.
+    public nonisolated static let enabledKey = "iCloudSync"
 
-    private(set) var status: Status = .off
+    public private(set) var status: Status = .off
     /// The Mac that last changed the library in iCloud.
-    private(set) var lastChangedBy: String?
+    public private(set) var lastChangedBy: String?
 
-    /// Answers the question asked when this Mac and iCloud both have a different library.
-    @ObservationIgnored var chooseFirstSync: (() async -> FirstSyncChoice?)?
+    /// Answers the question asked when this Mac and iCloud both have a different library (the Mac
+    /// app shows an alert). Without an answer the first sync doesn't happen and sync is turned off.
+    @ObservationIgnored public var chooseFirstSync: (@MainActor () async -> FirstSyncChoice?)?
 
     private let library: LibraryStore
     private let zoneName: String?
@@ -77,7 +90,7 @@ final class LibrarySync {
         case noAccount, restricted, temporarilyUnavailable, newerFormat, deletedInICloud, busy
     }
 
-    init(library: LibraryStore) {
+    public init(library: LibraryStore) {
         self.library = library
         let environment = ProcessInfo.processInfo.environment
         let isDefault = library.fileURL.standardizedFileURL == LibraryStore.defaultURL.standardizedFileURL
@@ -89,26 +102,45 @@ final class LibrarySync {
         lastChangedBy = state.device
     }
 
-    var isEnabled: Bool { UserDefaults.standard.bool(forKey: Prefs.iCloudSync) }
+    public var isEnabled: Bool { UserDefaults.standard.bool(forKey: Self.enabledKey) }
 
     /// Whether this build may use iCloud at all (see the type's description).
-    var isAvailable: Bool { Self.hasCloudKitEntitlement && zoneName != nil }
+    public var isAvailable: Bool { Self.hasCloudKitEntitlement && zoneName != nil }
 
-    nonisolated static var hasCloudKitEntitlement: Bool {
+    public nonisolated static var hasCloudKitEntitlement: Bool {
+        #if os(macOS)
         guard let task = SecTaskCreateFromSelf(nil),
               let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-container-identifiers" as CFString, nil)
         else { return false }
         return (value as? [String])?.contains(containerID) == true
+        #else
+        // iOS has no API to read an app's own entitlements; an iOS app using this needs the
+        // iCloud capability with the container.
+        return true
+        #endif
     }
 
-    nonisolated static var deviceName: String {
+    /// The name shown as "last changed by".
+    public static var deviceName: String {
+        #if os(macOS)
         (SCDynamicStoreCopyComputerName(nil, nil) as String?) ?? "Mac"
+        #else
+        UIDevice.current.name
+        #endif
+    }
+
+    private static var didBecomeActive: Notification.Name {
+        #if os(macOS)
+        NSApplication.didBecomeActiveNotification
+        #else
+        UIApplication.didBecomeActiveNotification
+        #endif
     }
 
     // MARK: Triggers
 
     /// Starts syncing (once per app run): now, on activation, every 5 minutes and after changes.
-    func start() {
+    public func start() {
         guard !started else { return }
         started = true
         // Debug aid: HOATZIN_SYNC_DELETE_ZONE=1 deletes a test zone (HOATZIN_SYNC_ZONE) instead of
@@ -130,7 +162,7 @@ final class LibrarySync {
         }
         library.onChange = { [weak self] in self?.libraryChanged() }
         let center = NotificationCenter.default
-        observers.append(center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+        observers.append(center.addObserver(forName: Self.didBecomeActive, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, Date().timeIntervalSince(self.lastAttempt) > 60 else { return }
                 self.syncNow()
@@ -146,7 +178,7 @@ final class LibrarySync {
     }
 
     /// The Settings switch was turned on or off.
-    func settingChanged() {
+    public func settingChanged() {
         guard isEnabled else { return status = .off }
         guard Self.hasCloudKitEntitlement else {
             return status = .unavailable(String(localized: "This build of Hoatzin cannot use iCloud. The notarized app from the GitHub releases can."))
@@ -157,7 +189,7 @@ final class LibrarySync {
         syncNow()
     }
 
-    func syncNow() {
+    public func syncNow() {
         guard isEnabled, isAvailable else { return }
         if running { again = true; return }
         running = true
@@ -233,7 +265,7 @@ final class LibrarySync {
             var plan = Self.plan(base: state.base, local: local, remote: remote)
             if plan.needsChoice, let remote {
                 guard let choice = await askFirstSync() else {
-                    UserDefaults.standard.set(false, forKey: Prefs.iCloudSync)
+                    UserDefaults.standard.set(false, forKey: Self.enabledKey)
                     status = .off
                     return
                 }
@@ -315,26 +347,9 @@ final class LibrarySync {
     }
 
     private func askFirstSync() async -> FirstSyncChoice? {
-        if let chooseFirstSync { return await chooseFirstSync() }
         // Debug aid for tests with two libraries: HOATZIN_SYNC_CHOICE=merge, useICloud or useThisMac.
         if let choice = ProcessInfo.processInfo.environment["HOATZIN_SYNC_CHOICE"] { return FirstSyncChoice(rawValue: choice) }
-        let alert = NSAlert()
-        alert.messageText = String(localized: "The library in iCloud differs from the one on this Mac")
-        alert.informativeText = String(localized: "Merge keeps the folders and connections of both. You can also replace this Mac’s library with the one in iCloud, or the other way round. A copy of this Mac’s library stays in the Hoatzin folder. Passwords are not affected.")
-        alert.addButton(withTitle: String(localized: "Merge"))
-        alert.addButton(withTitle: String(localized: "Use iCloud Library"))
-        alert.addButton(withTitle: String(localized: "Use This Mac’s Library"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
-        NSApp.activate(ignoringOtherApps: true)
-        // A sheet, because runModal here would hold up everything else on the main actor.
-        let window = NSApp.keyWindow ?? NSApp.windows.first { $0.isVisible && $0.title == "Hoatzin" }
-        let response = if let window { await alert.beginSheetModal(for: window) } else { alert.runModal() }
-        switch response {
-        case .alertFirstButtonReturn: return .merge
-        case .alertSecondButtonReturn: return .useICloud
-        case .alertThirdButtonReturn: return .useThisMac
-        default: return nil
-        }
+        return await chooseFirstSync?()
     }
 
     private func handle(_ error: Error) {
@@ -352,7 +367,7 @@ final class LibrarySync {
             // Deleted in System Settings → iCloud: take that as a wish to stop syncing.
             state = State()
             saveState()
-            UserDefaults.standard.set(false, forKey: Prefs.iCloudSync)
+            UserDefaults.standard.set(false, forKey: Self.enabledKey)
             status = .unavailable(String(localized: "The library was deleted from iCloud, so sync is now off."))
         case Failure.busy:
             status = .failed(String(localized: "The library in iCloud keeps changing. Hoatzin tries again shortly."))
@@ -397,7 +412,7 @@ final class LibrarySync {
 
     // MARK: Decisions (no CloudKit, tested)
 
-    nonisolated static func plan(base: [LibraryItem]?, local: [LibraryItem], remote: [LibraryItem]?) -> Plan {
+    public nonisolated static func plan(base: [LibraryItem]?, local: [LibraryItem], remote: [LibraryItem]?) -> Plan {
         guard let remote else {
             // Nothing in iCloud yet, or the record was removed: this Mac's library goes up.
             return base == nil && local.isEmpty ? Plan() : Plan(upload: local)
@@ -413,7 +428,7 @@ final class LibrarySync {
         return Plan(download: merged == local ? nil : merged, upload: merged == remote ? nil : merged)
     }
 
-    nonisolated static func plan(for choice: FirstSyncChoice, local: [LibraryItem], remote: [LibraryItem]) -> Plan {
+    public nonisolated static func plan(for choice: FirstSyncChoice, local: [LibraryItem], remote: [LibraryItem]) -> Plan {
         switch choice {
         case .merge:
             let merged = LibraryMerge.merge(base: [], local: local, remote: remote)
@@ -424,14 +439,14 @@ final class LibrarySync {
     }
 
     /// The library as stored in iCloud: library.json's format, compressed.
-    nonisolated static func encodePayload(_ items: [LibraryItem]) throws -> Data {
+    public nonisolated static func encodePayload(_ items: [LibraryItem]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let json = try encoder.encode(LibraryFile(items: items))
         return try (json as NSData).compressed(using: .lzfse) as Data
     }
 
-    nonisolated static func decodePayload(_ data: Data) throws -> [LibraryItem] {
+    public nonisolated static func decodePayload(_ data: Data) throws -> [LibraryItem] {
         let json = try (data as NSData).decompressed(using: .lzfse) as Data
         let file = try JSONDecoder().decode(LibraryFile.self, from: json)
         guard file.version <= LibraryFile.currentVersion else { throw Failure.newerFormat }

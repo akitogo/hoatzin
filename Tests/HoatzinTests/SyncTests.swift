@@ -1,5 +1,6 @@
 import XCTest
 @testable import Hoatzin
+@testable import HoatzinCore
 
 /// SwiftUI's developer tools have a LibraryItem too.
 private typealias LibraryItem = Hoatzin.LibraryItem

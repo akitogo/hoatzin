@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import HoatzinCore
 
 struct EditorSheet: View {
     let request: EditorRequest

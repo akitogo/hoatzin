@@ -1,5 +1,6 @@
 import Charts
 import SwiftUI
+import HoatzinCore
 
 enum AppVisibility {
     /// False while all of Hoatzin's windows are hidden, minimized, covered or on another Space:

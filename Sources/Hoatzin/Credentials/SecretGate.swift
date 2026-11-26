@@ -1,5 +1,6 @@
 import AppKit
 import LocalAuthentication
+import HoatzinCore
 
 /// Asks for Touch ID (or the Mac password as fallback) before Hoatzin uses a password
 /// saved in the Keychain, then stays unlocked for a grace period.

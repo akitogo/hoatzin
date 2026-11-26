@@ -1,4 +1,5 @@
 import Foundation
+import HoatzinCore
 
 /// How much AI clients may do (Settings → AI Access). Each level includes the ones before it.
 enum AIAccess: String, CaseIterable, Identifiable, Comparable {

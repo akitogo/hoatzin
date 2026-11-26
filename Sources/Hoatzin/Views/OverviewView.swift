@@ -1,4 +1,5 @@
 import SwiftUI
+import HoatzinCore
 
 struct OverviewView: View {
     @Environment(AppModel.self) private var model

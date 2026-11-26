@@ -1,5 +1,6 @@
 import XCTest
 @testable import Hoatzin
+@testable import HoatzinCore
 
 final class MetricsParserTests: XCTestCase {
     func testNodeHistoryKeepsGapsAndReadsStrings() {

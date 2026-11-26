@@ -1,31 +1,45 @@
 import Foundation
 import Observation
 
-enum GuestType: String, Hashable {
+public enum GuestType: String, Hashable {
     case qemu, lxc
 
-    var label: String { self == .qemu ? "VM" : "CT" }
+    public var label: String { self == .qemu ? "VM" : "CT" }
 }
 
-struct PVEGuest: Identifiable, Hashable {
-    var vmid: Int
-    var name: String
-    var node: String
-    var type: GuestType
-    var status: String
-    var isTemplate: Bool
-    var ips: [String] = []
+public struct PVEGuest: Identifiable, Hashable {
+    public var vmid: Int
+    public var name: String
+    public var node: String
+    public var type: GuestType
+    public var status: String
+    public var isTemplate: Bool
+    public var ips: [String] = []
     /// CPU use as a share of `cpus` (0…1) and memory use in bytes; nil while stopped.
-    var cpu: Double? = nil
-    var cpus: Int? = nil
-    var memory: Double? = nil
-    var maxMemory: Double? = nil
+    public var cpu: Double? = nil
+    public var cpus: Int? = nil
+    public var memory: Double? = nil
+    public var maxMemory: Double? = nil
 
-    var id: Int { vmid }
-    var isRunning: Bool { status == "running" }
+    public init(vmid: Int, name: String, node: String, type: GuestType, status: String, isTemplate: Bool, ips: [String] = [], cpu: Double? = nil, cpus: Int? = nil, memory: Double? = nil, maxMemory: Double? = nil) {
+        self.vmid = vmid
+        self.name = name
+        self.node = node
+        self.type = type
+        self.status = status
+        self.isTemplate = isTemplate
+        self.ips = ips
+        self.cpu = cpu
+        self.cpus = cpus
+        self.memory = memory
+        self.maxMemory = maxMemory
+    }
+
+    public var id: Int { vmid }
+    public var isRunning: Bool { status == "running" }
 
     /// Status and usage from an entry of `/cluster/resources`.
-    mutating func applyUsage(_ entry: [String: Any]) {
+    public mutating func applyUsage(_ entry: [String: Any]) {
         status = entry["status"] as? String ?? status
         cpus = ProxmoxClient.int(entry["maxcpu"]) ?? cpus
         maxMemory = MetricsParser.double(entry["maxmem"]) ?? maxMemory
@@ -34,50 +48,79 @@ struct PVEGuest: Identifiable, Hashable {
     }
 }
 
-struct PVENodeInfo: Identifiable, Hashable {
-    var name: String
-    var online: Bool
-    var ip: String?
+public struct PVENodeInfo: Identifiable, Hashable {
+    public var name: String
+    public var online: Bool
+    public var ip: String?
 
-    var id: String { name }
+    public init(name: String, online: Bool, ip: String? = nil) {
+        self.name = name
+        self.online = online
+        self.ip = ip
+    }
+
+    public var id: String { name }
 }
 
-enum ConsoleKind {
+public enum ConsoleKind {
     case lxc, qemuNoVNC, qemuXterm, nodeShell
+}
+
+/// What logging in to a Proxmox server needs from the app: passwords and the user's answers.
+/// The Mac app answers from the Keychain (after Touch ID) and with its prompt sheets.
+@MainActor
+public protocol ProxmoxLoginHandler: AnyObject {
+    /// The password for `key`, saved or asked for; nil cancels the login.
+    func credential(for key: CredentialKey, title: String, message: String, forcePrompt: Bool, isRetry: Bool) async -> ResolvedCredential?
+    /// The login with `credential` worked, e.g. to save it if the user asked for that.
+    func loginSucceeded(with credential: ResolvedCredential) async
+    /// The code for a two-factor login; nil cancels.
+    func oneTimeCode(title: String, message: String) async -> String?
+    /// Whether to trust a certificate the system doesn't. `changed`: it replaces one trusted before.
+    func trustCertificate(title: String, message: String, fingerprint: String, changed: Bool) async -> Bool
 }
 
 /// Live (never persisted) state of the configured Proxmox servers.
 @MainActor
 @Observable
-final class ProxmoxRuntime {
-    struct ServerState {
-        var nodes: [PVENodeInfo] = []
-        var guests: [PVEGuest] = []
-        var isLoading = false
-        var error: String?
-        var lastRefresh: Date?
-        var loggedInAs: String?
+public final class ProxmoxRuntime {
+    public struct ServerState {
+        public var nodes: [PVENodeInfo] = []
+        public var guests: [PVEGuest] = []
+        public var isLoading = false
+        public var error: String?
+        public var lastRefresh: Date?
+        public var loggedInAs: String?
         /// Why the usage columns couldn't be updated last time; nil after a success.
-        var usageProblem: LiveDataProblem?
+        public var usageProblem: LiveDataProblem?
         /// When CPU and memory were last fetched.
-        var usageUpdated: Date?
+        public var usageUpdated: Date?
+
+        public init(nodes: [PVENodeInfo] = [], guests: [PVEGuest] = [], isLoading: Bool = false, error: String? = nil, lastRefresh: Date? = nil, loggedInAs: String? = nil, usageProblem: LiveDataProblem? = nil, usageUpdated: Date? = nil) {
+            self.nodes = nodes
+            self.guests = guests
+            self.isLoading = isLoading
+            self.error = error
+            self.lastRefresh = lastRefresh
+            self.loggedInAs = loggedInAs
+            self.usageProblem = usageProblem
+            self.usageUpdated = usageUpdated
+        }
     }
 
-    private(set) var states: [UUID: ServerState] = [:]
+    public private(set) var states: [UUID: ServerState] = [:]
     @ObservationIgnored private var clients: [UUID: ProxmoxClient] = [:]
     @ObservationIgnored private var logins: [UUID: Task<ProxmoxClient, Error>] = [:]
 
-    let library: LibraryStore
-    let broker: CredentialBroker
-    let prompts: PromptCenter
+    public let library: LibraryStore
+    public let loginHandler: any ProxmoxLoginHandler
 
-    init(library: LibraryStore, broker: CredentialBroker, prompts: PromptCenter) {
+    public init(library: LibraryStore, loginHandler: any ProxmoxLoginHandler) {
         self.library = library
-        self.broker = broker
-        self.prompts = prompts
+        self.loginHandler = loginHandler
     }
 
-    func state(_ serverID: UUID) -> ServerState {
+    public func state(_ serverID: UUID) -> ServerState {
         states[serverID] ?? ServerState()
     }
 
@@ -89,8 +132,8 @@ final class ProxmoxRuntime {
     private struct DemoServer: Decodable {
         struct Node: Decodable { var name: String; var online: Bool; var ip: String? }
         struct Guest: Decodable {
-            var vmid: Int, name: String, node: String, type: String, status: String
-            var template: Bool?, ips: [String]?
+            public var vmid: Int, name: String, node: String, type: String, status: String
+            public var template: Bool?, ips: [String]?
         }
         var nodes: [Node]
         var guests: [Guest]
@@ -99,7 +142,7 @@ final class ProxmoxRuntime {
 
     /// Fills servers from a JSON file shaped `{"<server id>": {"nodes": […], "guests": […]}}`
     /// instead of their API: for screenshots and demos without a Proxmox server.
-    func loadDemo(from url: URL) {
+    public func loadDemo(from url: URL) {
         guard let data = try? Data(contentsOf: url),
               let servers = try? JSONDecoder().decode([String: DemoServer].self, from: data)
         else { return NSLog("Hoatzin: can't read demo Proxmox data at \(url.path)") }
@@ -117,11 +160,11 @@ final class ProxmoxRuntime {
         }
     }
 
-    func guest(server: UUID, vmid: Int) -> PVEGuest? {
+    public func guest(server: UUID, vmid: Int) -> PVEGuest? {
         states[server]?.guests.first { $0.vmid == vmid }
     }
 
-    func nodeInfo(server: UUID, node: String) -> PVENodeInfo? {
+    public func nodeInfo(server: UUID, node: String) -> PVENodeInfo? {
         states[server]?.nodes.first { $0.name == node }
     }
 
@@ -140,7 +183,7 @@ final class ProxmoxRuntime {
 
     /// Returns a client with a valid ticket, logging in (and asking for trust / password / OTP) if needed.
     /// Concurrent callers share one login.
-    func authenticatedClient(_ serverID: UUID) async throws -> ProxmoxClient {
+    public func authenticatedClient(_ serverID: UUID) async throws -> ProxmoxClient {
         if let running = logins[serverID] { return try await running.value }
         guard let item = library.item(serverID), let client = client(for: item) else {
             throw ProxmoxError.transport(String(localized: "Proxmox server has no host configured."))
@@ -161,7 +204,7 @@ final class ProxmoxRuntime {
         return try await task.value
     }
 
-    func logout(_ serverID: UUID) {
+    public func logout(_ serverID: UUID) {
         clients[serverID]?.invalidateTicket()
         clients[serverID] = nil
         states[serverID]?.loggedInAs = nil
@@ -174,8 +217,8 @@ final class ProxmoxRuntime {
         while true {
             guard let item = library.item(serverID), let config = item.proxmox else { throw CancellationError() }
             let key = CredentialKey(server: config.effectiveKeychainHost, account: config.username, proto: .https, port: config.port)
-            guard let credential = await broker.resolve(
-                key,
+            guard let credential = await loginHandler.credential(
+                for: key,
                 title: String(localized: "Proxmox login — \(item.name)"),
                 message: attempt == 0
                     ? String(localized: "No saved password for \(key.display). Pick it from Passwords (AutoFill) or type it.")
@@ -194,7 +237,7 @@ final class ProxmoxRuntime {
                 continue
             }
 
-            await broker.commit(credential)
+            await loginHandler.loginSucceeded(with: credential)
             if account != config.username {
                 library.modify(serverID) { $0.proxmox?.username = account }
             }
@@ -207,12 +250,10 @@ final class ProxmoxRuntime {
         do {
             try await client.login(user: user, password: password)
         } catch ProxmoxError.needsTFA(let challenge) {
-            guard let code = await prompts.askText(TextPrompt(
+            guard let code = await loginHandler.oneTimeCode(
                 title: String(localized: "Two-factor code — \(serverName)"),
-                message: String(localized: "Enter the TOTP code from your authenticator (or recovery:KEY)."),
-                placeholder: "123456",
-                secure: false
-            )) else { throw CancellationError() }
+                message: String(localized: "Enter the TOTP code from your authenticator (or recovery:KEY).")
+            ) else { throw CancellationError() }
             let trimmed = code.trimmingCharacters(in: .whitespaces)
             let response = trimmed.contains(":") ? trimmed : "totp:\(trimmed)"
             try await client.completeTFA(user: user, challenge: challenge, response: response)
@@ -227,15 +268,14 @@ final class ProxmoxRuntime {
                 return
             } catch ProxmoxError.untrustedCertificate(let fingerprint, let changed) {
                 let name = library.item(serverID)?.name ?? client.host
-                let ok = await prompts.confirm(ConfirmPrompt(
+                let ok = await loginHandler.trustCertificate(
                     title: changed ? String(localized: "Certificate changed — \(name)") : String(localized: "Trust certificate — \(name)?"),
                     message: changed
                         ? String(localized: "The certificate of \(client.host):\(String(client.port)) is different from the one you trusted before. Only continue if you renewed it.")
                         : String(localized: "\(client.host):\(String(client.port)) uses a certificate macOS does not trust (normal for Proxmox' self-signed certificate). Compare the fingerprint with Datacenter › Node › System › Certificates."),
-                    detail: "SHA-256\n\(fingerprint)",
-                    confirmTitle: String(localized: "Trust"),
-                    destructive: changed
-                ))
+                    fingerprint: fingerprint,
+                    changed: changed
+                )
                 guard ok else { throw CancellationError() }
                 library.modify(serverID) { $0.proxmox?.pinnedSHA256 = fingerprint }
                 client.pinned = fingerprint
@@ -246,7 +286,7 @@ final class ProxmoxRuntime {
 
     // MARK: Refresh
 
-    func refreshAll() async {
+    public func refreshAll() async {
         await withTaskGroup(of: Void.self) { group in
             for server in library.proxmoxServers {
                 group.addTask { await self.refresh(server.id) }
@@ -254,7 +294,7 @@ final class ProxmoxRuntime {
         }
     }
 
-    func refresh(_ serverID: UUID) async {
+    public func refresh(_ serverID: UUID) async {
         guard library.item(serverID)?.proxmox != nil, !demoServers.contains(serverID) else { return }
         states[serverID, default: ServerState()].isLoading = true
         defer { states[serverID]?.isLoading = false }
@@ -345,7 +385,7 @@ final class ProxmoxRuntime {
     /// The `data` of an API call made with the current session. Never asks for a password:
     /// without a session it throws `notLoggedIn`. A session older than an hour is renewed first,
     /// so graphs that stay open keep working.
-    func sessionGet(_ serverID: UUID, _ path: String) async throws -> Any? {
+    public func sessionGet(_ serverID: UUID, _ path: String) async throws -> Any? {
         if demoServers.contains(serverID) {
             // Debug aid: HOATZIN_DEMO_LOGGED_OUT=1 acts as if the login had expired.
             if ProcessInfo.processInfo.environment["HOATZIN_DEMO_LOGGED_OUT"] != nil { throw ProxmoxError.notLoggedIn }
@@ -371,7 +411,7 @@ final class ProxmoxRuntime {
     /// Updates the guests' status and CPU and memory use with one quick call, without asking
     /// for a login; when that fails, `usageProblem` says why. New or removed guests wait for
     /// the next full refresh.
-    func refreshUsage(_ serverID: UUID) async {
+    public func refreshUsage(_ serverID: UUID) async {
         let resources: [[String: Any]]
         do {
             resources = try await sessionGet(serverID, "/cluster/resources?type=vm") as? [[String: Any]] ?? []
@@ -432,7 +472,7 @@ final class ProxmoxRuntime {
         return rank(found.filter(isUsableIPv4), near: near)
     }
 
-    nonisolated static func isIgnoredInterface(_ name: String?) -> Bool {
+    public nonisolated static func isIgnoredInterface(_ name: String?) -> Bool {
         guard let name else { return false }
         let ignored = ["lo", "docker", "br-", "veth", "virbr", "cni", "flannel", "cali", "kube", "tailscale", "zt"]
         return ignored.contains { name == $0 || name.hasPrefix($0) }
@@ -442,14 +482,14 @@ final class ProxmoxRuntime {
         String(cidr.split(separator: "/").first ?? Substring(cidr))
     }
 
-    nonisolated static func isUsableIPv4(_ ip: String) -> Bool {
+    public nonisolated static func isUsableIPv4(_ ip: String) -> Bool {
         let parts = ip.split(separator: ".").compactMap { Int($0) }
         guard parts.count == 4 else { return false }
         return parts[0] != 127 && !(parts[0] == 169 && parts[1] == 254)
     }
 
     /// Addresses sharing the most leading octets with the Proxmox host first.
-    nonisolated static func rank(_ ips: [String], near host: String) -> [String] {
+    public nonisolated static func rank(_ ips: [String], near host: String) -> [String] {
         let hostParts = host.split(separator: ".")
         func score(_ ip: String) -> Int {
             zip(ip.split(separator: "."), hostParts).prefix { $0 == $1 }.count
@@ -460,7 +500,7 @@ final class ProxmoxRuntime {
 
     // MARK: Console URLs
 
-    func consoleURL(client: ProxmoxClient, kind: ConsoleKind, node: String, vmid: Int?, name: String?) -> URL {
+    public func consoleURL(client: ProxmoxClient, kind: ConsoleKind, node: String, vmid: Int?, name: String?) -> URL {
         var components = URLComponents(url: client.baseURL, resolvingAgainstBaseURL: false)!
         components.path = "/"
         var query: [URLQueryItem] = []

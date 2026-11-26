@@ -2,7 +2,7 @@ import Foundation
 
 /// What the end of ssh in a built-in tab means. ssh exits with 255 for its own errors and with
 /// the remote shell's status otherwise; its own messages are always in English.
-enum SSHExit: Equatable {
+public enum SSHExit: Equatable {
     /// Exit code 0: the user logged out (exit, Control-D).
     case clean
     /// A working connection broke: the server restarted, the network went away or the Mac slept.
@@ -15,15 +15,15 @@ enum SSHExit: Equatable {
     case remoteExit
 
     /// ssh's last words when an established connection ends without a logout.
-    static let lostPhrases = ["closed by remote host", "broken pipe", "not responding", "connection reset by peer",
+    public static let lostPhrases = ["closed by remote host", "broken pipe", "not responding", "connection reset by peer",
                               "read from remote host", "client_loop: send disconnect"]
     /// Errors before a session got in, even where the wording overlaps with the ones above.
-    static let notConnectedPhrases = ["connect to host", "kex_exchange_identification", "could not resolve hostname"]
-    static let refusedPhrases = ["permission denied", "host key verification failed", "too many authentication failures",
+    public static let notConnectedPhrases = ["connect to host", "kex_exchange_identification", "could not resolve hostname"]
+    public static let refusedPhrases = ["permission denied", "host key verification failed", "too many authentication failures",
                                  "remote host identification has changed"]
 
     /// - Parameter lastLines: the end of the tab's text; ssh's message is in its last two lines.
-    static func classify(exitCode: Int32?, lastLines: String) -> SSHExit {
+    public static func classify(exitCode: Int32?, lastLines: String) -> SSHExit {
         if exitCode == 0 { return .clean }
         guard exitCode == 255 else { return .remoteExit }
         let lines = lastLines.lowercased().split(separator: "\n").suffix(2)
@@ -38,18 +38,18 @@ enum SSHExit: Equatable {
 /// What a built-in tab does after ssh ended, including a round of automatic reconnects after a
 /// dropped connection: attempts every few seconds until one gets in, the login is refused, or
 /// `window` has passed (a server restart usually takes one or two minutes).
-struct ReconnectPlan {
-    static let window: TimeInterval = 300
+public struct ReconnectPlan {
+    public static let window: TimeInterval = 300
     /// An attempt that kept running this long got in; a later drop starts a new round.
-    static let connectedAfter: TimeInterval = 20
+    public static let connectedAfter: TimeInterval = 20
     /// Seconds an attempt waits for the server, so an unreachable host fails quickly.
-    static let connectTimeout = 10
+    public static let connectTimeout = 10
 
-    static func delay(beforeAttempt attempt: Int) -> TimeInterval {
+    public static func delay(beforeAttempt attempt: Int) -> TimeInterval {
         attempt <= 1 ? 2 : (attempt == 2 ? 5 : 10)
     }
 
-    enum Step: Equatable {
+    public enum Step: Equatable {
         case closeTab
         case retry(attempt: Int, delay: TimeInterval)
         case gaveUp
@@ -57,17 +57,19 @@ struct ReconnectPlan {
     }
 
     /// When the current round ends; nil outside of one.
-    private(set) var until: Date?
-    private(set) var attempt = 0
+    public private(set) var until: Date?
+    public private(set) var attempt = 0
 
-    var isActive: Bool { until != nil }
+    public init() {}
 
-    mutating func cancel() {
+    public var isActive: Bool { until != nil }
+
+    public mutating func cancel() {
         until = nil
         attempt = 0
     }
 
-    mutating func next(after ending: SSHExit, ranFor: TimeInterval, now: Date = Date(),
+    public mutating func next(after ending: SSHExit, ranFor: TimeInterval, now: Date = Date(),
                        closeOnClean: Bool, autoReconnect: Bool) -> Step {
         if ranFor >= Self.connectedAfter { cancel() }
         if ending == .clean {

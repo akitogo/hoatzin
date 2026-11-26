@@ -1,4 +1,5 @@
 import SwiftUI
+import HoatzinCore
 
 /// A section of Settings, listed in its sidebar.
 enum SettingsPane: String, CaseIterable, Identifiable {

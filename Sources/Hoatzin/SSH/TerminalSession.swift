@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import SwiftTerm
+import HoatzinCore
 
 /// A key typed after text by the AI tool `send_input`.
 enum TerminalKey: String, CaseIterable {

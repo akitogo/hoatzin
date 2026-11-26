@@ -3,8 +3,8 @@ import Foundation
 /// Made-up API answers for demo servers (HOATZIN_DEMO_PROXMOX), so graphs and usage columns can
 /// be shown and photographed without a Proxmox server. The values wander smoothly over time and
 /// stay the same for the same moment, so history and live values fit together.
-enum DemoMetrics {
-    static func response(_ path: String, state: ProxmoxRuntime.ServerState?, now: Date = Date()) -> Any? {
+public enum DemoMetrics {
+    public static func response(_ path: String, state: ProxmoxRuntime.ServerState?, now: Date = Date()) -> Any? {
         let route = path.split(separator: "?").first.map(String.init) ?? path
         let parts = route.split(separator: "/").map(String.init)
         let timeframe = path.components(separatedBy: "timeframe=").dropFirst().first?.split(separator: "&").first.map(String.init)

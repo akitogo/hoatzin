@@ -2,6 +2,7 @@ import XCTest
 import AppKit
 import SwiftUI
 @testable import Hoatzin
+@testable import HoatzinCore
 
 private final class Marker {}
 

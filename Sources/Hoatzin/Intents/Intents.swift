@@ -1,5 +1,6 @@
 import AppIntents
 import CoreSpotlight
+import HoatzinCore
 
 /// An error shown by Shortcuts, Siri or Spotlight.
 struct IntentFailure: Error, CustomLocalizedStringResourceConvertible {

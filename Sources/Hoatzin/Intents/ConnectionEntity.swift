@@ -1,6 +1,7 @@
 import AppIntents
 import CoreSpotlight
 import UniformTypeIdentifiers
+import HoatzinCore
 
 /// What kind of connection an entry is.
 enum ConnectionKind: String, AppEnum {

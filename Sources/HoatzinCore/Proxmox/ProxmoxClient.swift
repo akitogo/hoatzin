@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import Security
 
-enum ProxmoxError: LocalizedError {
+public enum ProxmoxError: LocalizedError {
     case untrustedCertificate(fingerprint: String, changed: Bool)
     case authenticationFailed
     case needsTFA(challenge: String)
@@ -11,7 +11,7 @@ enum ProxmoxError: LocalizedError {
     case invalidResponse
     case transport(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .untrustedCertificate(let fp, let changed):
             return changed ? String(localized: "The server certificate changed (\(fp)).") : String(localized: "Untrusted server certificate (\(fp)).")
@@ -25,9 +25,9 @@ enum ProxmoxError: LocalizedError {
     }
 }
 
-enum TLSFingerprint {
+public enum TLSFingerprint {
     /// SHA-256 of the leaf certificate, formatted like Proxmox shows it (AA:BB:…).
-    static func sha256(of trust: SecTrust) -> String? {
+    public static func sha256(of trust: SecTrust) -> String? {
         guard
             let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
             let leaf = chain.first
@@ -37,7 +37,7 @@ enum TLSFingerprint {
     }
 
     /// Accept system-trusted certificates, or exactly the pinned one.
-    static func evaluate(_ trust: SecTrust, pinned: String?) -> (accepted: Bool, fingerprint: String?) {
+    public static func evaluate(_ trust: SecTrust, pinned: String?) -> (accepted: Bool, fingerprint: String?) {
         let fingerprint = sha256(of: trust)
         if SecTrustEvaluateWithError(trust, nil) { return (true, fingerprint) }
         if let pinned, let fingerprint, pinned.caseInsensitiveCompare(fingerprint) == .orderedSame {
@@ -48,9 +48,9 @@ enum TLSFingerprint {
 }
 
 /// Minimal Proxmox VE API client (ticket authentication).
-final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
-    let host: String
-    let port: Int
+public final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
+    public let host: String
+    public let port: Int
 
     private let lock = NSLock()
     private var _pinned: String?
@@ -61,7 +61,7 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
     private var _issued: Date?
     private var session: URLSession!
 
-    init(host: String, port: Int, pinned: String?) {
+    public init(host: String, port: Int, pinned: String?) {
         self.host = host
         self.port = port
         self._pinned = pinned
@@ -77,16 +77,16 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
 
     // MARK: State
 
-    var pinned: String? {
+    public var pinned: String? {
         get { lock.withLock { _pinned } }
         set { lock.withLock { _pinned = newValue } }
     }
 
-    var ticket: String? { lock.withLock { _ticket } }
-    var user: String? { lock.withLock { _user } }
+    public var ticket: String? { lock.withLock { _ticket } }
+    public var user: String? { lock.withLock { _user } }
 
     /// Tickets live 2 h; renew a bit earlier.
-    var hasValidTicket: Bool {
+    public var hasValidTicket: Bool {
         lock.withLock {
             guard _ticket != nil, let issued = _issued else { return false }
             return Date().timeIntervalSince(issued) < 100 * 60
@@ -94,30 +94,30 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
     }
 
     /// How long ago the ticket was issued or renewed.
-    var ticketAge: TimeInterval? {
+    public var ticketAge: TimeInterval? {
         lock.withLock { _issued.map { Date().timeIntervalSince($0) } }
     }
 
-    func invalidateTicket() {
+    public func invalidateTicket() {
         lock.withLock { _ticket = nil; _csrf = nil; _issued = nil }
     }
 
-    var hostForURL: String {
+    public var hostForURL: String {
         host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
     }
 
-    var baseURL: URL {
+    public var baseURL: URL {
         URL(string: "https://\(hostForURL):\(port)")!
     }
 
     // MARK: Requests
 
     /// Opens a TLS connection to surface certificate problems before asking for a password.
-    func probe() async throws {
+    public func probe() async throws {
         _ = try await raw("GET", "/api2/json/version", form: nil, authenticated: false, allowUnauthorized: true)
     }
 
-    func login(user: String, password: String) async throws {
+    public func login(user: String, password: String) async throws {
         let (status, json) = try await raw("POST", "/api2/json/access/ticket",
                                            form: ["username": user, "password": password],
                                            authenticated: false, allowUnauthorized: true)
@@ -126,7 +126,7 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
 
     /// A fresh ticket for the current one, without the password: Proxmox accepts a valid ticket
     /// in place of the password. Leaves the old ticket in place if that fails.
-    func renewTicket() async throws {
+    public func renewTicket() async throws {
         guard let (user, ticket) = lock.withLock({ () -> (String, String)? in
             guard let user = _user, let ticket = _ticket else { return nil }
             return (user, ticket)
@@ -138,7 +138,7 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
     }
 
     /// PVE 7+: second step with the TFA challenge ticket. `response` like "totp:123456".
-    func completeTFA(user: String, challenge: String, response: String) async throws {
+    public func completeTFA(user: String, challenge: String, response: String) async throws {
         let (status, json) = try await raw("POST", "/api2/json/access/ticket",
                                            form: ["username": user, "tfa-challenge": challenge, "password": response],
                                            authenticated: false, allowUnauthorized: true)
@@ -163,7 +163,7 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
     }
 
     /// Returns the `data` member of an authenticated API call.
-    func get(_ path: String) async throws -> Any? {
+    public func get(_ path: String) async throws -> Any? {
         let (status, json) = try await raw("GET", "/api2/json" + path, form: nil, authenticated: true, allowUnauthorized: false)
         guard status == 200 else { throw ProxmoxError.invalidResponse }
         return (json as? [String: Any])?["data"]
@@ -215,7 +215,7 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
 
     // MARK: URLSessionDelegate
 
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
+    public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = challenge.protectionSpace.serverTrust
@@ -234,13 +234,13 @@ final class ProxmoxClient: NSObject, URLSessionDelegate, @unchecked Sendable {
 
     // MARK: Helpers
 
-    static func formEncode(_ value: String) -> String {
+    public static func formEncode(_ value: String) -> String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
-    static func int(_ value: Any?) -> Int? {
+    public static func int(_ value: Any?) -> Int? {
         switch value {
         case let v as Int: return v
         case let v as NSNumber: return v.intValue

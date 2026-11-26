@@ -18,7 +18,9 @@ func die(_ message: String) -> Never {
 let arguments = CommandLine.arguments
 guard arguments.count == 4 else { die("usage: check-translations.swift <stringsdata dir> <extract.actionsdata> <Resources dir>") }
 let (stringsDir, metadataPath, resources) = (arguments[1], arguments[2], arguments[3])
-let sourceRoot = FileManager.default.currentDirectoryPath + "/Sources/Hoatzin/"
+let sourceRoot = FileManager.default.currentDirectoryPath + "/Sources/"
+/// The app and its shared core (HoatzinCore); not the helpers, which show no texts.
+let checkedTargets = ["Hoatzin/", "HoatzinCore/"]
 
 /// Keys of the app, with where they come from.
 var keys: [String: String] = [:]
@@ -28,6 +30,7 @@ for name in (try? FileManager.default.contentsOfDirectory(atPath: stringsDir)) ?
     guard let data = FileManager.default.contents(atPath: "\(stringsDir)/\(name)"),
           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
           let source = object["source"] as? String, source.hasPrefix(sourceRoot),
+          checkedTargets.contains(where: { source.dropFirst(sourceRoot.count).hasPrefix($0) }),
           FileManager.default.fileExists(atPath: source)
     else { continue }
     for (table, entries) in object["tables"] as? [String: [[String: Any]]] ?? [:] where table == "Localizable" {

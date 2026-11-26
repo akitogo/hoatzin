@@ -1,27 +1,39 @@
 import Foundation
 
 /// Everything needed to start one ssh connection. Contains no secrets.
-struct SSHTarget: Hashable {
-    var displayName: String
-    var host: String
-    var port: Int = 22
-    var username: String
-    var auth: SSHAuthMode = .password
-    var identityFile: String = ""
-    var keychainHost: String = ""
-    var extraArgs: String = ""
+public struct SSHTarget: Hashable {
+    public var displayName: String
+    public var host: String
+    public var port: Int = 22
+    public var username: String
+    public var auth: SSHAuthMode = .password
+    public var identityFile: String = ""
+    public var keychainHost: String = ""
+    public var extraArgs: String = ""
     /// Also tried when no Keychain item exists for `credentialKey`
     /// (e.g. the Proxmox root@pam password for SSH to a Proxmox node).
-    var fallbackKey: CredentialKey? = nil
+    public var fallbackKey: CredentialKey? = nil
 
-    var credentialKey: CredentialKey {
+    public init(displayName: String, host: String, port: Int = 22, username: String, auth: SSHAuthMode = .password, identityFile: String = "", keychainHost: String = "", extraArgs: String = "", fallbackKey: CredentialKey? = nil) {
+        self.displayName = displayName
+        self.host = host
+        self.port = port
+        self.username = username
+        self.auth = auth
+        self.identityFile = identityFile
+        self.keychainHost = keychainHost
+        self.extraArgs = extraArgs
+        self.fallbackKey = fallbackKey
+    }
+
+    public var credentialKey: CredentialKey {
         let server = keychainHost.trimmingCharacters(in: .whitespaces)
         return CredentialKey(server: server.isEmpty ? host : server, account: username, proto: .ssh, port: port)
     }
 
-    var userAtHost: String { "\(username)@\(host)" + (port == 22 ? "" : ":\(port)") }
+    public var userAtHost: String { "\(username)@\(host)" + (port == 22 ? "" : ":\(port)") }
 
-    var sshArguments: [String] {
+    public var sshArguments: [String] {
         var args = ["-o", "ServerAliveInterval=30"]
         if port != 22 { args += ["-p", String(port)] }
         if !username.isEmpty { args += ["-l", username] }
@@ -38,7 +50,7 @@ struct SSHTarget: Hashable {
     /// ~/.ssh/config, so neither the config nor the entry's extra arguments can undo these.
     /// `-T` goes after the extra arguments because for flags the last one wins. `--` after the
     /// host stops ssh from reading a command that starts with "-" as options.
-    func commandArguments(_ command: String) -> [String] {
+    public func commandArguments(_ command: String) -> [String] {
         let hardened = [
             "StrictHostKeyChecking=yes", // never accept a new or changed host key
             "UpdateHostKeys=no",
@@ -54,7 +66,7 @@ struct SSHTarget: Hashable {
     }
 
     /// Minimal shell-like splitting that honours single and double quotes.
-    static func splitArguments(_ text: String) -> [String] {
+    public static func splitArguments(_ text: String) -> [String] {
         var result: [String] = []
         var current = ""
         var quote: Character?
@@ -77,7 +89,7 @@ struct SSHTarget: Hashable {
         return result
     }
 
-    static func shellQuote(_ value: String) -> String {
+    public static func shellQuote(_ value: String) -> String {
         "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }

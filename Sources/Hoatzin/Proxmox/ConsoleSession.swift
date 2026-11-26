@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import WebKit
+import HoatzinCore
 
 /// A Proxmox console (xterm.js shell / noVNC screen) in a tab.
 /// Uses an in-memory web data store; the auth ticket only lives there and in RAM.

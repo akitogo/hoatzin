@@ -15,6 +15,31 @@ Needs Xcode installed. The macOS 27 SDK's SwiftUI macros ship with Xcode, not wi
 Line Tools, and the script selects Xcode automatically. Tests:
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`.
 
+### Code layout
+
+* `Sources/HoatzinCore` is the part an iOS app can share: the library and its file, iCloud sync,
+  the Proxmox API with the data for the graphs, SSH targets and reconnecting, and the Keychain. It
+  doesn't use AppKit and builds for macOS 14 and iOS 17. Where the platforms differ (the device
+  name, the app becoming active) it uses `#if os(macOS)`. Questions to the user go through the app:
+  `ProxmoxLoginHandler` for passwords, two-factor codes and certificates (the Mac app's
+  `CredentialBroker` answers), and `LibrarySync.chooseFirstSync` for the first sync.
+* `Sources/Hoatzin` is the Mac app: windows, terminal tabs, prompts, Touch ID, AI access and
+  Shortcuts.
+* `Sources/hoatzin-askpass` and `Sources/hoatzin-mcp` are the helpers.
+
+Texts in the core are looked up in the app's main bundle, so their German translations are in
+`Resources/de.lproj` like the app's, and the translation check covers both. An iOS app needs them
+in its own strings files.
+
+The iOS SDK isn't needed to check that the core still builds without AppKit. Mac Catalyst uses the
+iOS frameworks and the core's iOS code paths:
+
+```bash
+SDK=$(xcrun --sdk macosx --show-sdk-path); IOS=$SDK/System/iOSSupport
+xcrun swiftc -typecheck -parse-as-library -module-name HoatzinCore -target arm64-apple-ios17.0-macabi \
+  -sdk "$SDK" -Fsystem "$IOS/System/Library/Frameworks" -I "$IOS/usr/lib/swift" Sources/HoatzinCore/*/*.swift
+```
+
 ### What the build script does besides compiling
 
 * **Acknowledgements:** it writes `Contents/Resources/Acknowledgements.json`, the libraries shown

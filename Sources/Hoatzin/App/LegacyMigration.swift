@@ -1,4 +1,5 @@
 import Foundation
+import HoatzinCore
 
 /// Hoatzin was called RemoteDeck (bundle ID com.akitogo.RemoteDeck). On the first launch as
 /// Hoatzin this copies what the old app stored: the library, the settings and the AI activity

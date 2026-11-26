@@ -1,4 +1,5 @@
 import AppKit
+import HoatzinCore
 
 struct SidebarRow: Equatable {
     enum Tint: Equatable { case none, running, stopped, warning, accent }
