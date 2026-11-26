@@ -124,6 +124,8 @@ of releases.
 * `scripts/screenshots.sh`: retakes the README screenshots from the demo data in `docs/demo`, in
   light and dark. Your own library and settings are neither shown nor changed.
 * `HOATZIN_OPEN_ABOUT=1` / `HOATZIN_OPEN_SETTINGS=1`: open the About panel or Settings on launch.
+  `-settingsPane ai` on the app's command line picks the section Settings shows (`ssh`,
+  `defaultLogin`, `passwords`, `proxmox`, `sidebar`, `library`, `ai`, `shortcuts`).
 * `-AppleLanguages "(en)"` (or `"(de)"`) on the app's command line: run in that language once.
 * `HOATZIN_SYNC_ZONE=Test-1` with `HOATZIN_LIBRARY` and `-iCloudSync YES`: sync that library with
   its own iCloud zone, e.g. two instances with two libraries to try merging. A library other than

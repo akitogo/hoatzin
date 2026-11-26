@@ -84,6 +84,8 @@ enum Prefs {
     static let closeTabOnCleanExit = "closeTabOnCleanExit"
     /// Reconnect a built-in SSH tab whose connection dropped (server restart, network, sleep).
     static let autoReconnect = "autoReconnect"
+    /// SettingsPane raw value: the section Settings opens with (the last one shown).
+    static let settingsPane = "settingsPane"
 
     /// Every setting the user can change (also what the move from RemoteDeck copies).
     static let all = [sshOpenIn, itermNewTab, terminalFontSize, savePasswordsByDefault, defaultSSHUser, defaultSSHAuth,
