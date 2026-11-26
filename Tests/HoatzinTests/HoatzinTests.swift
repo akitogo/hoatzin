@@ -1875,6 +1875,8 @@ final class AboutPanelTests: XCTestCase {
         XCTAssertTrue(credits.string.contains("OpenSSH"))
         XCTAssertTrue(credits.string.contains("GNU General Public License, version 3"))
         XCTAssertTrue(credits.string.contains("not covered by the GPL"))
+        // Part of the GPL's Appropriate Legal Notices, which changed versions must keep showing.
+        XCTAssertTrue(credits.string.contains("There is no warranty"))
         let range = (credits.string as NSString).range(of: "SwiftTerm 1.99.3")
         XCTAssertEqual(credits.attribute(.link, at: range.location, effectiveRange: nil) as? URL,
                        URL(string: "https://github.com/migueldeicaza/SwiftTerm"))

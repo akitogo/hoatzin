@@ -375,8 +375,9 @@
 "OpenSSH (/usr/bin/ssh, part of macOS) for SSH connections." = "OpenSSH (/usr/bin/ssh, Teil von macOS) für SSH-Verbindungen.";
 "The Proxmox VE web console (xterm.js, noVNC), loaded from your Proxmox server." = "Die Proxmox-VE-Webkonsole (xterm.js, noVNC), geladen von deinem Proxmox-Server.";
 "License" = "Lizenz";
-"Free software under the GNU General Public License, version 3." = "Freie Software unter der GNU General Public License, Version 3.";
-"The name Hoatzin and its icon are not covered by the GPL." = "Der Name Hoatzin und das Icon fallen nicht unter die GPL.";
+"Free software: you may use, change and pass it on under the GNU General Public License, version 3." = "Freie Software: Du darfst sie unter der GNU General Public License, Version 3, nutzen, ändern und weitergeben.";
+"There is no warranty, to the extent permitted by law." = "Es besteht keine Gewährleistung, soweit gesetzlich zulässig.";
+"Changed versions must say so and need their own name and icon. The name Hoatzin and its icon are not covered by the GPL." = "Geänderte Versionen müssen das angeben und brauchen einen eigenen Namen und ein eigenes Icon. Der Name Hoatzin und das Icon fallen nicht unter die GPL.";
 /* Library purposes from scripts/acknowledgements.swift */
 "Terminal emulator for the built-in SSH tabs." = "Terminal-Emulator für die integrierten SSH-Tabs.";
 

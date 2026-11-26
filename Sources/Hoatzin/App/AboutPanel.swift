@@ -66,9 +66,13 @@ enum AboutPanel {
         add(String(localized: "The Proxmox VE web console (xterm.js, noVNC), loaded from your Proxmox server.") + "\n", color: .secondaryLabelColor)
 
         add("\n" + String(localized: "License") + "\n", weight: .semibold)
-        add(String(localized: "Free software under the GNU General Public License, version 3.") + "\n",
+        // Together with the copyright line from Info.plist, these are the GPL's "Appropriate Legal
+        // Notices", which changed versions must keep showing (see "Additional terms" in the README).
+        add(String(localized: "Free software: you may use, change and pass it on under the GNU General Public License, version 3.") + "\n",
             color: .secondaryLabelColor, link: URL(string: "https://www.gnu.org/licenses/gpl-3.0.html"))
-        add(String(localized: "The name Hoatzin and its icon are not covered by the GPL.") + "\n", color: .secondaryLabelColor)
+        add(String(localized: "There is no warranty, to the extent permitted by law.") + "\n", color: .secondaryLabelColor)
+        add(String(localized: "Changed versions must say so and need their own name and icon. The name Hoatzin and its icon are not covered by the GPL.") + "\n",
+            color: .secondaryLabelColor)
         return text
     }
 }

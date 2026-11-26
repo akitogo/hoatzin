@@ -339,10 +339,20 @@ Copyright © 2026 Akitogo Internet and Media Applications GmbH.
 
 Hoatzin is free software: you may use, change and pass it on, also commercially, under the terms
 of the GNU General Public License, version 3 (see `LICENSE`). Whoever distributes a changed version
-has to publish its source code under the same license.
+has to publish its source code under the same license. There is no warranty, to the extent
+permitted by law.
 
-The name "Hoatzin" and the app icon (`Resources/AppIcon-source.png`, `Resources/AppIcon.icns`,
-`docs/icon.png`) are not covered by the GPL. Forks need their own name and icon.
+### Additional terms
+
+Section 7 of the GPL allows additional terms. These apply to all of Hoatzin:
+
+1. **Attribution (section 7 b):** every copy and every changed version keeps the copyright notice
+   above and the copyright and license notices in *About Hoatzin*.
+2. **Origin (section 7 c):** a changed version is marked as changed. It must not be presented as
+   the original Hoatzin, or as made or published by Akitogo Internet and Media Applications GmbH.
+3. **Name and icon (section 7 e):** the name "Hoatzin" and the app icon
+   (`Resources/AppIcon-source.png`, `Resources/AppIcon.icns`, `docs/icon.png`) are not covered by
+   the GPL, and it grants no trademark rights to them. Forks need their own name and icon.
 
 Bundled third-party code: [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) by Miguel
 de Icaza (MIT License), the terminal in built-in tabs. Its license text is in *About Hoatzin*.
