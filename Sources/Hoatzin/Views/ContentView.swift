@@ -9,7 +9,7 @@ struct ContentView: View {
         @Bindable var model = model
         NavigationSplitView {
             SidebarOutline(
-                rows: SidebarFilter.apply(model.sidebarRows(), query: model.sidebarFilter),
+                rows: SidebarFilter.apply(model.sidebarTree(), query: model.sidebarFilter),
                 filter: $model.sidebarFilter,
                 focusFilterRequest: model.filterFocusRequest,
                 selection: $model.selection,

@@ -23,6 +23,10 @@ Line Tools, and the script selects Xcode automatically. Tests:
   name, the app becoming active) it uses `#if os(macOS)`. Questions to the user go through the app:
   `ProxmoxLoginHandler` for passwords, two-factor codes and certificates (the Mac app's
   `CredentialBroker` answers), and `LibrarySync.chooseFirstSync` for the first sync.
+* `Sources/HoatzinUI` holds SwiftUI views both apps show the same way: the graphs of Proxmox
+  nodes and guests (`MetricsPanel`). Platform differences in there are marked `#if os(macOS)`.
+  The Mac app passes in whether its windows can be seen; settings both apps share use the keys in
+  `MetricsSettings`.
 * `Sources/Hoatzin` is the Mac app: windows, terminal tabs, prompts, Touch ID, AI access and
   Shortcuts.
 * `Sources/hoatzin-askpass` and `Sources/hoatzin-mcp` are the helpers.

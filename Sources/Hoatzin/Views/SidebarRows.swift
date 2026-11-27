@@ -18,6 +18,18 @@ struct SidebarRow: Equatable {
     var isFolder = false
     /// Library item (can be dragged).
     var isMovable = false
+    /// Tells rows of the same entry apart: a favourite is shown twice. nil = `id.stringValue`.
+    var key: String? = nil
+    /// The heading of the "Favorites" or "Library" group.
+    var isGroup = false
+
+    var nodeKey: String { key ?? id.stringValue }
+    /// A favourite's copy of an entry, not the entry in the library.
+    var isFavoriteCopy: Bool { key != nil && !isGroup }
+
+    /// The IDs of the two group headings, which are no library entries.
+    static let favoritesGroupID = SidebarID.item(UUID(uuidString: "00000000-0000-0000-0000-0000000000F1")!)
+    static let libraryGroupID = SidebarID.item(UUID(uuidString: "00000000-0000-0000-0000-0000000000F2")!)
 }
 
 /// Narrows the sidebar tree in place.
@@ -38,7 +50,8 @@ enum SidebarFilter {
 
     private static func filter(_ rows: [SidebarRow], remaining: [String]) -> [SidebarRow] {
         rows.compactMap { row in
-            let text = fold(([row.title, row.badge ?? ""] + row.keywords).joined(separator: " "))
+            // A group's heading matches nothing itself, only its entries do.
+            let text = row.isGroup ? "" : fold(([row.title, row.badge ?? ""] + row.keywords).joined(separator: " "))
             let unmatched = remaining.filter { !text.contains($0) }
             if unmatched.isEmpty { return row }
             guard let children = row.children else { return nil }
@@ -66,8 +79,53 @@ struct SidebarMenuItem {
 
 @MainActor
 extension AppModel {
+    /// The library as a tree (also for Shortcuts and AI apps).
     func sidebarRows() -> [SidebarRow] {
         library.items.map(row(for:))
+    }
+
+    /// What the sidebar shows: with favourites, the groups "Favorites" and "Library", as in
+    /// Finder's sidebar; without, just the library.
+    func sidebarTree() -> [SidebarRow] {
+        let rows = sidebarRows()
+        let favorites = library.favorites
+        guard !favorites.isEmpty else { return rows }
+        return [
+            SidebarRow(id: SidebarRow.favoritesGroupID, title: String(localized: "Favorites"), symbol: "star",
+                       children: favorites.map(favoriteRow), key: "group:favorites", isGroup: true),
+            SidebarRow(id: SidebarRow.libraryGroupID, title: String(localized: "Library"), symbol: "books.vertical",
+                       children: rows, key: "group:library", isGroup: true),
+        ]
+    }
+
+    /// A favourite looks like its row in the library, with the server's name for a node or
+    /// guest, and without the guests below a Proxmox server.
+    private func favoriteRow(_ favorite: Favorite) -> SidebarRow {
+        var row: SidebarRow
+        switch favorite.id {
+        case .item(let id):
+            row = library.item(id).map(row(for:))
+                ?? SidebarRow(id: favorite.id, title: favorite.name, symbol: favorite.kind == .proxmox ? "server.rack" : "terminal")
+        case .node(let server, let node):
+            row = proxmox.nodeInfo(server: server, node: node).map { nodeRow(server: server, $0, children: []) }
+                ?? SidebarRow(id: favorite.id, title: favorite.name, symbol: "cpu", tint: .stopped)
+            row.detail = [favorite.serverName, row.detail].compactMap { $0 }.joined(separator: " · ")
+        case .guest(let server, let vmid):
+            if let guest = proxmox.guest(server: server, vmid: vmid) {
+                row = guestRow(server: server, guest)
+                row.detail = [favorite.serverName, row.detail].compactMap { $0 }.joined(separator: " · ")
+            } else {
+                // Its server isn't loaded (yet): the name it had when it was last seen.
+                row = SidebarRow(id: favorite.id, title: favorite.name, detail: favorite.serverName, badge: String(vmid),
+                                 symbol: favorite.guestType == .lxc ? "shippingbox" : "desktopcomputer", tint: .stopped)
+            }
+        }
+        row.children = nil
+        row.isFolder = false
+        row.isMovable = false
+        row.keywords += [favorite.serverName ?? ""]
+        row.key = "favorite:" + favorite.id.stringValue
+        return row
     }
 
     private func row(for item: LibraryItem) -> SidebarRow {
@@ -119,6 +177,12 @@ extension AppModel {
 
     // MARK: Context menus
 
+    func toggleFavorite(_ id: SidebarID) {
+        var guest: PVEGuest?
+        if case .guest(let server, let vmid) = id { guest = proxmox.guest(server: server, vmid: vmid) }
+        library.setFavorite(id, !library.isFavorite(id), guest: guest)
+    }
+
     func menuItems(for id: SidebarID?) -> [SidebarMenuItem] {
         let newItems: (UUID?) -> [SidebarMenuItem] = { parent in [
             SidebarMenuItem(title: String(localized: "New SSH Connection…"), symbol: "terminal") { self.editor = .newItem(.ssh, parent: parent) },
@@ -127,6 +191,9 @@ extension AppModel {
         ] }
 
         guard let id else { return newItems(nil) }
+        let favorite = library.isFavorite(id)
+            ? SidebarMenuItem(title: String(localized: "Remove from Favorites"), symbol: "star.slash") { self.toggleFavorite(id) }
+            : SidebarMenuItem(title: String(localized: "Add to Favorites"), symbol: "star") { self.toggleFavorite(id) }
         let terminal = Prefs.preferredTerminal
         let sshItems: [SidebarMenuItem] = sshTarget(for: id) == nil ? [] : [
             SidebarMenuItem(title: String(localized: "Connect (\(terminal.label))"), symbol: "bolt.fill") { self.connect(id) },
@@ -145,7 +212,7 @@ extension AppModel {
                     SidebarMenuItem(title: String(localized: "Rename…"), symbol: "pencil") { self.editor = .edit(uuid) },
                     SidebarMenuItem(title: String(localized: "Delete…"), symbol: "trash") { self.delete(uuid) }]
             case .ssh:
-                return sshItems + [.separator,
+                return sshItems + [.separator, favorite,
                     SidebarMenuItem(title: String(localized: "Edit…"), symbol: "pencil") { self.editor = .edit(uuid) },
                     SidebarMenuItem(title: String(localized: "Duplicate"), symbol: "plus.square.on.square") { self.library.duplicate(uuid) },
                     SidebarMenuItem(title: String(localized: "Copy Host"), symbol: "doc.on.clipboard") { self.copyToPasteboard(item.ssh?.host ?? "") },
@@ -156,6 +223,7 @@ extension AppModel {
                     SidebarMenuItem(title: String(localized: "Refresh"), symbol: "arrow.clockwise") { Task { await self.proxmox.refresh(uuid) } },
                     SidebarMenuItem(title: String(localized: "Open Web UI"), symbol: "safari") { self.openWebUI(server: uuid) },
                     .separator,
+                    favorite,
                     SidebarMenuItem(title: String(localized: "Edit…"), symbol: "pencil") { self.editor = .edit(uuid) },
                     SidebarMenuItem(title: String(localized: "Log Out"), symbol: "rectangle.portrait.and.arrow.right") { self.proxmox.logout(uuid) },
                     .separator,
@@ -170,6 +238,7 @@ extension AppModel {
                 },
             ] + sshItems + [
                 .separator,
+                favorite,
                 SidebarMenuItem(title: String(localized: "Copy Address"), symbol: "doc.on.clipboard") {
                     self.copyToPasteboard(self.proxmox.nodeInfo(server: server, node: node)?.ip ?? "")
                 },
@@ -193,6 +262,7 @@ extension AppModel {
             }
             items += [
                 .separator,
+                favorite,
                 SidebarMenuItem(title: String(localized: "SSH Settings…"), symbol: "slider.horizontal.3") { self.editor = .guest(server: server, vmid: vmid) },
             ]
             if let ip = sshTarget(for: id)?.host {

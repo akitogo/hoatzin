@@ -2,24 +2,8 @@ import AppKit
 import Observation
 import HoatzinCore
 
-enum SidebarID: Hashable {
-    case item(UUID)
-    case node(server: UUID, node: String)
-    case guest(server: UUID, vmid: Int)
-
-    var stringValue: String {
-        switch self {
-        case .item(let id): return "item:\(id.uuidString)"
-        case .node(let server, let node): return "node:\(server.uuidString):\(node)"
-        case .guest(let server, let vmid): return "guest:\(server.uuidString):\(vmid)"
-        }
-    }
-
-    var libraryID: UUID? {
-        if case .item(let id) = self { return id }
-        return nil
-    }
-}
+/// The shared entry ID of HoatzinCore, as the sidebar selects it.
+typealias SidebarID = EntryID
 
 @MainActor
 enum OpenSession: Identifiable {

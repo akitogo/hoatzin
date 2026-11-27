@@ -21,20 +21,6 @@ enum AIAccess: String, CaseIterable, Identifiable, Comparable {
     }
 }
 
-extension SidebarID {
-    /// Parses `stringValue` ("item:UUID", "node:UUID:name", "guest:UUID:vmid").
-    init?(string: String) {
-        let parts = string.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
-        guard parts.count >= 2, let uuid = UUID(uuidString: parts[1]) else { return nil }
-        switch (parts[0], parts.count) {
-        case ("item", 2): self = .item(uuid)
-        case ("node", 3) where !parts[2].isEmpty: self = .node(server: uuid, node: parts[2])
-        case ("guest", 3): guard let vmid = Int(parts[2]) else { return nil }; self = .guest(server: uuid, vmid: vmid)
-        default: return nil
-        }
-    }
-}
-
 /// Answers the tools offered by `hoatzin-mcp`.
 ///
 /// What AI clients get: names, IDs, addresses, states, command output and (if allowed) the

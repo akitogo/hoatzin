@@ -147,7 +147,10 @@ struct SidebarOutline: NSViewRepresentable {
         var lastFocusRequest = 0
         private var isFiltering = false
         private var roots: [Node] = []
-        private var cache: [SidebarID: Node] = [:]
+        /// By `SidebarRow.nodeKey`: a favourite is a second node of the same entry.
+        private var cache: [String: Node] = [:]
+        /// By entry; the library's node where an entry is also a favourite.
+        private var byID: [SidebarID: Node] = [:]
         private var lastRows: [SidebarRow] = []
         private var lastTruncation: NSLineBreakMode?
         private var applying = false
@@ -173,9 +176,13 @@ struct SidebarOutline: NSViewRepresentable {
                 lastRows = rows
                 lastTruncation = parent.addressTruncation
                 isFiltering = filtering
-                var used: [SidebarID: Node] = [:]
+                var used: [String: Node] = [:]
                 roots = build(rows, parent: nil, used: &used)
                 cache = used
+                byID = [:]
+                for node in used.values where !node.row.isGroup && (byID[node.row.id] == nil || !node.row.isFavoriteCopy) {
+                    byID[node.row.id] = node
+                }
                 outline.reloadData()
                 if filtering {
                     outline.expandItem(nil, expandChildren: true)
@@ -196,12 +203,12 @@ struct SidebarOutline: NSViewRepresentable {
             }
         }
 
-        private func build(_ rows: [SidebarRow], parent: Node?, used: inout [SidebarID: Node]) -> [Node] {
+        private func build(_ rows: [SidebarRow], parent: Node?, used: inout [String: Node]) -> [Node] {
             rows.map { row in
-                let node = cache[row.id] ?? Node(row: row)
+                let node = cache[row.nodeKey] ?? Node(row: row)
                 node.row = row
                 node.parent = parent
-                used[row.id] = node
+                used[row.nodeKey] = node
                 node.children = build(row.children ?? [], parent: node, used: &used)
                 return node
             }
@@ -209,7 +216,7 @@ struct SidebarOutline: NSViewRepresentable {
 
         private func restoreExpansion(_ nodes: [Node]) {
             for node in nodes where node.row.children != nil {
-                if !collapsed.contains(node.row.id.stringValue) {
+                if !collapsed.contains(node.row.nodeKey) {
                     outline?.expandItem(node)
                     restoreExpansion(node.children)
                 } else {
@@ -220,7 +227,9 @@ struct SidebarOutline: NSViewRepresentable {
 
         private func syncSelection(_ selection: SidebarID?) {
             guard let outline else { return }
-            guard let selection, let node = cache[selection] else {
+            // A favourite stays selected where it was clicked, not in the library.
+            if let selection, let current = outline.item(atRow: outline.selectedRow) as? Node, current.row.id == selection { return }
+            guard let selection, let node = byID[selection] else {
                 if outline.selectedRow >= 0, selection == nil { outline.deselectAll(nil) }
                 return
             }
@@ -245,10 +254,24 @@ struct SidebarOutline: NSViewRepresentable {
             (item as? Node)?.row.children != nil
         }
 
+        /// The headings "Favorites" and "Library", as in Finder's sidebar.
+        func outlineView(_ outlineView: NSOutlineView, isGroupItem item: Any) -> Bool {
+            (item as? Node)?.row.isGroup == true
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
+            (item as? Node)?.row.isGroup != true
+        }
+
         // MARK: Cells
 
         func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
             guard let node = item as? Node else { return nil }
+            if node.row.isGroup {
+                let header = (outlineView.makeView(withIdentifier: SidebarGroupCell.identifier, owner: nil) as? SidebarGroupCell) ?? SidebarGroupCell()
+                header.textField?.stringValue = node.row.title
+                return header
+            }
             let cell = (outlineView.makeView(withIdentifier: SidebarCell.identifier, owner: nil) as? SidebarCell) ?? SidebarCell()
             cell.configure(node.row, addressTruncation: parent.addressTruncation)
             return cell
@@ -263,14 +286,14 @@ struct SidebarOutline: NSViewRepresentable {
 
         func outlineViewItemDidExpand(_ notification: Notification) {
             guard !applying, !isFiltering, let node = notification.userInfo?["NSObject"] as? Node else { return }
-            collapsed.remove(node.row.id.stringValue)
+            collapsed.remove(node.row.nodeKey)
             persistExpansion()
             restoreExpansion(node.children)
         }
 
         func outlineViewItemDidCollapse(_ notification: Notification) {
             guard !applying, !isFiltering, let node = notification.userInfo?["NSObject"] as? Node else { return }
-            collapsed.insert(node.row.id.stringValue)
+            collapsed.insert(node.row.nodeKey)
             persistExpansion()
         }
 
@@ -281,7 +304,7 @@ struct SidebarOutline: NSViewRepresentable {
         // MARK: Activation
 
         @objc func doubleClicked(_ sender: NSOutlineView) {
-            guard sender.clickedRow >= 0, let node = sender.item(atRow: sender.clickedRow) as? Node else { return }
+            guard sender.clickedRow >= 0, let node = sender.item(atRow: sender.clickedRow) as? Node, !node.row.isGroup else { return }
             if node.row.isFolder {
                 sender.isItemExpanded(node) ? sender.collapseItem(node) : sender.expandItem(node)
             } else {
@@ -290,7 +313,7 @@ struct SidebarOutline: NSViewRepresentable {
         }
 
         func activateSelection() {
-            guard let outline, let node = outline.item(atRow: outline.selectedRow) as? Node else { return }
+            guard let outline, let node = outline.item(atRow: outline.selectedRow) as? Node, !node.row.isGroup else { return }
             parent.onActivate(node.row.id)
         }
 
@@ -324,10 +347,19 @@ struct SidebarOutline: NSViewRepresentable {
             return true
         }
 
-        /// Connections, nodes and guests currently shown, top to bottom.
+        /// Connections, nodes and guests currently shown, top to bottom; favourites only where
+        /// they aren't also shown in the library.
         private var visibleLeaves: [Node] {
             guard let outline else { return [] }
-            return (0..<outline.numberOfRows).compactMap { outline.item(atRow: $0) as? Node }.filter { $0.row.children == nil }
+            let leaves = (0..<outline.numberOfRows).compactMap { outline.item(atRow: $0) as? Node }.filter { $0.row.children == nil }
+            let inLibrary = Set(leaves.filter { !$0.row.isFavoriteCopy }.map(\.row.id))
+            return leaves.filter { !$0.row.isFavoriteCopy || !inLibrary.contains($0.row.id) }
+        }
+
+        /// The first row that can be selected (not a group heading).
+        private var firstSelectable: Node? {
+            guard let outline else { return nil }
+            return (0..<outline.numberOfRows).lazy.compactMap { outline.item(atRow: $0) as? Node }.first { !$0.row.isGroup }
         }
 
         private func select(_ node: Node) {
@@ -342,7 +374,7 @@ struct SidebarOutline: NSViewRepresentable {
         private func focusList() {
             guard let outline else { return }
             outline.window?.makeFirstResponder(outline)
-            if outline.selectedRow < 0, let first = isFiltering ? visibleLeaves.first : roots.first {
+            if outline.selectedRow < 0, let first = isFiltering ? visibleLeaves.first : firstSelectable {
                 select(first)
             }
         }
@@ -371,6 +403,7 @@ struct SidebarOutline: NSViewRepresentable {
             menu.removeAllItems()
             guard let outline else { return }
             let node = outline.clickedRow >= 0 ? outline.item(atRow: outline.clickedRow) as? Node : nil
+            if node?.row.isGroup == true { return }
             for entry in parent.menuItems(node?.row.id) {
                 if entry.isSeparator {
                     if menu.items.last?.isSeparatorItem == false { menu.addItem(.separator()) }
@@ -406,8 +439,10 @@ struct SidebarOutline: NSViewRepresentable {
                     check = up
                 }
             }
-            if target.folder !== (item as? Node) || target.index != index {
-                outlineView.setDropItem(target.folder, dropChildIndex: target.index ?? NSOutlineViewDropOnItemIndex)
+            // The top level of the library is below the "Library" heading when there are favourites.
+            let shown = target.folder ?? libraryGroup
+            if shown !== (item as? Node) || target.index != index {
+                outlineView.setDropItem(shown, dropChildIndex: target.index ?? NSOutlineViewDropOnItemIndex)
             }
             return .move
         }
@@ -421,16 +456,28 @@ struct SidebarOutline: NSViewRepresentable {
             return true
         }
 
+        /// The "Library" heading, when there are favourites.
+        private var libraryGroup: Node? {
+            roots.first { $0.row.isGroup && $0.row.id == SidebarRow.libraryGroupID }
+        }
+
+        /// The library's top level: the entries below the "Library" heading, or all roots.
+        private var libraryRoots: [Node] { libraryGroup?.children ?? roots }
+
         /// Only library folders and the top level accept drops; dropping onto another entry
-        /// inserts next to it.
+        /// inserts next to it. Favourites don't take drops. `folder` nil = the top level.
         private func dropTarget(item: Node?, index: Int) -> (folder: Node?, index: Int?)? {
-            guard let item else { return (nil, index == NSOutlineViewDropOnItemIndex ? roots.count : index) }
+            if item == nil, libraryGroup != nil { return nil } // between the headings
+            guard let item, item !== libraryGroup else {
+                return (nil, index == NSOutlineViewDropOnItemIndex ? libraryRoots.count : index)
+            }
+            if item.row.isGroup || item.row.isFavoriteCopy { return nil }
             if item.row.isFolder {
                 return (item, index == NSOutlineViewDropOnItemIndex ? nil : index)
             }
             guard item.row.isMovable else { return nil } // inside a Proxmox server
-            let container = item.parent
-            let siblings = container?.children ?? roots
+            let container = item.parent === libraryGroup ? nil : item.parent
+            let siblings = container?.children ?? libraryRoots
             guard let position = siblings.firstIndex(where: { $0 === item }) else { return nil }
             return (container, position + 1)
         }
@@ -449,6 +496,30 @@ final class ClosureMenuItem: NSMenuItem {
     required init(coder: NSCoder) { fatalError() }
 
     @objc private func fire() { handler?() }
+}
+
+/// The heading of a group in the sidebar: "Favorites" or "Library".
+final class SidebarGroupCell: NSTableCellView {
+    static let identifier = NSUserInterfaceItemIdentifier("SidebarGroupCell")
+
+    init() {
+        super.init(frame: .zero)
+        identifier = Self.identifier
+        let label = NSTextField(labelWithString: "")
+        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        label.lineBreakMode = .byTruncatingTail
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        textField = label
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
 }
 
 final class SidebarCell: NSTableCellView {

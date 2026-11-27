@@ -1,5 +1,6 @@
 import AppKit
 import HoatzinCore
+import HoatzinUI
 
 enum TerminalChoice: String, CaseIterable, Identifiable {
     case iterm, terminal, builtin
@@ -76,9 +77,9 @@ enum Prefs {
     /// Sync the library through iCloud (see LibrarySync).
     static let iCloudSync = LibrarySync.enabledKey
     /// Seconds between updates of Proxmox live values (graphs, usage columns); 0 = manually.
-    static let proxmoxRefreshInterval = "proxmoxRefreshInterval"
+    static let proxmoxRefreshInterval = MetricsSettings.refreshIntervalKey
     /// MetricsTimeframe raw value last chosen for the graphs.
-    static let metricsTimeframe = "metricsTimeframe"
+    static let metricsTimeframe = MetricsSettings.timeframeKey
     /// GuestComparator raw value: the column the guest list is sorted by, e.g. "cpu:desc".
     static let guestSort = "guestSort"
     /// Close a built-in SSH tab when ssh ends with exit code 0 (exit, Control-D).

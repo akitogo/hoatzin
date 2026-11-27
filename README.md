@@ -158,6 +158,13 @@ and the launch stops with a message in the terminal. Refusals are logged as
 * **⇧⌘W** closes the window on purpose.
 * **Other windows:** in Settings and AI Activity, ⌘W closes that window.
 
+## Favorites
+
+Right-click an SSH connection, a Proxmox server, a node or a guest and choose *Add to Favorites*.
+The sidebar then shows them in a group *Favorites* above the *Library*. Favorites are kept in the
+library, so iCloud sync brings them to your other Macs and to Hoatzin on iPhone and iPad. A
+favourite guest keeps its name while its server isn't loaded yet.
+
 ## Sidebar filter
 
 The field above the sidebar (⌘F) narrows the tree in place:

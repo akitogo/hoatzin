@@ -89,7 +89,11 @@ public struct ProxmoxConfig: Codable, Hashable {
     /// Per-guest SSH settings, keyed by VMID.
     public var guestOverrides: [String: GuestOverride] = [:]
 
-    public init(host: String = "", port: Int = 8006, username: String = "root", realm: String = "pam", keychainHost: String = "", pinnedSHA256: String? = nil, sshUsername: String = "", sshAuth: SSHAuthMode? = nil, sshIdentityFile: String = "", guestOverrides: [String: GuestOverride] = [:]) {
+    /// Favourite nodes and guests (see Favorites.swift); nil when there are none.
+    public var favoriteNodes: [String]? = nil
+    public var favoriteGuests: [FavoriteGuest]? = nil
+
+    public init(host: String = "", port: Int = 8006, username: String = "root", realm: String = "pam", keychainHost: String = "", pinnedSHA256: String? = nil, sshUsername: String = "", sshAuth: SSHAuthMode? = nil, sshIdentityFile: String = "", guestOverrides: [String: GuestOverride] = [:], favoriteNodes: [String]? = nil, favoriteGuests: [FavoriteGuest]? = nil) {
         self.host = host
         self.port = port
         self.username = username
@@ -100,6 +104,8 @@ public struct ProxmoxConfig: Codable, Hashable {
         self.sshAuth = sshAuth
         self.sshIdentityFile = sshIdentityFile
         self.guestOverrides = guestOverrides
+        self.favoriteNodes = favoriteNodes
+        self.favoriteGuests = favoriteGuests
     }
 
     /// Linux user of the Proxmox login ("root" for root@pam).
@@ -124,14 +130,17 @@ public struct LibraryItem: Identifiable, Codable, Hashable {
     public var children: [LibraryItem] = []
     public var ssh: SSHConfig? = nil
     public var proxmox: ProxmoxConfig? = nil
+    /// Shown among the favourites (see Favorites.swift); nil = no.
+    public var favorite: Bool? = nil
 
-    public init(id: UUID = UUID(), kind: ItemKind, name: String, children: [LibraryItem] = [], ssh: SSHConfig? = nil, proxmox: ProxmoxConfig? = nil) {
+    public init(id: UUID = UUID(), kind: ItemKind, name: String, children: [LibraryItem] = [], ssh: SSHConfig? = nil, proxmox: ProxmoxConfig? = nil, favorite: Bool? = nil) {
         self.id = id
         self.kind = kind
         self.name = name
         self.children = children
         self.ssh = ssh
         self.proxmox = proxmox
+        self.favorite = favorite
     }
 
     public static func folder(_ name: String) -> LibraryItem {
@@ -320,6 +329,10 @@ public final class LibraryStore {
         guard var copy = item(id), copy.kind != .folder else { return }
         copy.id = UUID()
         copy.name = String(localized: "\(copy.name) copy")
+        // The copy isn't a favourite, and doesn't double the original's favourite guests.
+        copy.favorite = nil
+        copy.proxmox?.favoriteNodes = nil
+        copy.proxmox?.favoriteGuests = nil
         add(copy, to: parentID(of: id))
     }
 

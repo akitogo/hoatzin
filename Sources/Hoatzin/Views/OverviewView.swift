@@ -1,5 +1,6 @@
 import SwiftUI
 import HoatzinCore
+import HoatzinUI
 
 struct OverviewView: View {
     @Environment(AppModel.self) private var model
@@ -323,7 +324,7 @@ private struct NodeOverview: View {
             }
             if info?.online != false {
                 let subject = MetricsSubject.node(server: serverID, node: node)
-                MetricsPanel(subject: subject).id(subject).padding(.top, 6)
+                MetricsPanel(subject: subject, runtime: model.proxmox, isVisible: { AppVisibility.isVisible }).id(subject).padding(.top, 6)
             }
         }
     }
@@ -368,7 +369,7 @@ private struct GuestOverview: View {
                 }
                 if !guest.isTemplate {
                     let subject = MetricsSubject.guest(server: serverID, node: guest.node, type: guest.type, vmid: vmid)
-                    MetricsPanel(subject: subject).id(subject).padding(.top, 6)
+                    MetricsPanel(subject: subject, runtime: model.proxmox, isVisible: { AppVisibility.isVisible }).id(subject).padding(.top, 6)
                 }
             }
         } else {

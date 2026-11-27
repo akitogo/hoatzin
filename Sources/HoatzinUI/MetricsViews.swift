@@ -1,41 +1,51 @@
 import Charts
-import SwiftUI
 import HoatzinCore
+import SwiftUI
 
-enum AppVisibility {
-    /// False while all of Hoatzin's windows are hidden, minimized, covered or on another Space:
-    /// live values then pause.
-    @MainActor static var isVisible: Bool { NSApp.occlusionState.contains(.visible) }
+// The graphs of Proxmox nodes and guests, shared by the Mac and the iOS app. The data comes
+// from HoatzinCore (ProxmoxMetrics.swift); the few differences between the platforms are
+// marked with `#if os(macOS)`.
+
+/// The settings both apps keep for the graphs, under the same keys.
+public enum MetricsSettings {
+    /// How often live values are fetched, in seconds (see `RefreshInterval`).
+    public static let refreshIntervalKey = "proxmoxRefreshInterval"
+    /// The `MetricsTimeframe` last chosen.
+    public static let timeframeKey = "metricsTimeframe"
 }
+
+/// True for a Mac run that takes screenshots (scripts/screenshots.sh): the mouse, wherever it
+/// is, shouldn't change them.
+private var isTakingSnapshots: Bool { ProcessInfo.processInfo.environment["HOATZIN_SNAPSHOT"] != nil }
 
 /// The figures, graphs and storage of one node or guest, kept while its page is shown.
 @MainActor
 @Observable
-final class MetricsModel {
-    let subject: MetricsSubject
-    private(set) var status: MetricsStatus?
-    private(set) var live = LiveRecorder()
-    private(set) var history: [MetricSample] = []
-    private(set) var historyTimeframe: MetricsTimeframe?
-    private(set) var storages: [StorageUsage] = []
+public final class MetricsModel {
+    public let subject: MetricsSubject
+    public private(set) var status: MetricsStatus?
+    public private(set) var live = LiveRecorder()
+    public private(set) var history: [MetricSample] = []
+    public private(set) var historyTimeframe: MetricsTimeframe?
+    public private(set) var storages: [StorageUsage] = []
     /// Why the last update failed; nil after a success.
-    private(set) var problem: LiveDataProblem?
+    public private(set) var problem: LiveDataProblem?
     /// When the values were last updated.
-    private(set) var lastSuccess: Date?
+    public private(set) var lastSuccess: Date?
     @ObservationIgnored private var lastSlowUpdate: Date?
 
-    init(subject: MetricsSubject) {
+    public init(subject: MetricsSubject) {
         self.subject = subject
     }
 
-    func samples(for timeframe: MetricsTimeframe) -> [MetricSample] {
+    public func samples(for timeframe: MetricsTimeframe) -> [MetricSample] {
         if timeframe == .live { return live.samples }
         return historyTimeframe == timeframe ? history : []
     }
 
     /// Fetches the current values. History and storage, which Proxmox updates once a minute,
     /// come along when `force`d, for a new timeframe, or when they are a minute old.
-    func update(_ runtime: ProxmoxRuntime, timeframe: MetricsTimeframe, force: Bool = false) async {
+    public func update(_ runtime: ProxmoxRuntime, timeframe: MetricsTimeframe, force: Bool = false) async {
         let now = Date()
         let slow = force || (timeframe != .live && historyTimeframe != timeframe)
             || lastSlowUpdate.map { now.timeIntervalSince($0) >= 60 } ?? true
@@ -68,16 +78,20 @@ final class MetricsModel {
 
 /// Figures and graphs of a node or guest, updated at the interval from Settings while visible.
 /// Give it `.id(subject)`, so another node or guest starts with fresh data.
-struct MetricsPanel: View {
+public struct MetricsPanel: View {
     let subject: MetricsSubject
-    @Environment(AppModel.self) private var model
-    @AppStorage(Prefs.proxmoxRefreshInterval) private var interval = 10.0
-    @AppStorage(Prefs.metricsTimeframe) private var timeframe: MetricsTimeframe = .hour
+    let runtime: ProxmoxRuntime
+    /// False while the app can't be seen (Mac: all windows hidden or covered): live values pause.
+    let isVisible: @MainActor () -> Bool
+    @AppStorage(MetricsSettings.refreshIntervalKey) private var interval = 10.0
+    @AppStorage(MetricsSettings.timeframeKey) private var timeframe: MetricsTimeframe = .hour
     @State private var metrics: MetricsModel
     @State private var hover: Date?
 
-    init(subject: MetricsSubject) {
+    public init(subject: MetricsSubject, runtime: ProxmoxRuntime, isVisible: @escaping @MainActor () -> Bool = { true }) {
         self.subject = subject
+        self.runtime = runtime
+        self.isVisible = isVisible
         _metrics = State(initialValue: MetricsModel(subject: subject))
     }
 
@@ -88,9 +102,9 @@ struct MetricsPanel: View {
         let serverRefresh: Date?
     }
 
-    var body: some View {
+    public var body: some View {
         let samples = metrics.samples(for: timeframe)
-        let server = model.proxmox.state(subject.server)
+        let server = runtime.state(subject.server)
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 Picker("Period", selection: $timeframe) {
@@ -98,23 +112,30 @@ struct MetricsPanel: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                #if os(macOS)
                 .fixedSize()
+                #endif
+                #if os(macOS)
                 Spacer()
+                #endif
                 RefreshIntervalMenu(interval: $interval) {
-                    Task { await metrics.update(model.proxmox, timeframe: timeframe, force: true) }
+                    Task { await metrics.update(runtime, timeframe: timeframe, force: true) }
                 }
+                #if os(iOS)
+                .labelStyle(.iconOnly)
+                #endif
             }
             if let problem = metrics.problem {
                 LiveDataNotice(problem: problem, lastSuccess: metrics.lastSuccess, isLoggingIn: server.isLoading,
-                               logIn: { Task { await model.proxmox.refresh(subject.server) } },
-                               retry: { Task { await metrics.update(model.proxmox, timeframe: timeframe, force: true) } })
+                               logIn: { Task { await runtime.refresh(subject.server) } },
+                               retry: { Task { await metrics.update(runtime, timeframe: timeframe, force: true) } })
             }
             // Old values are dimmed while they can't be updated.
             VStack(alignment: .leading, spacing: 14) {
                 if let status = metrics.status {
                     StatTiles(status: status, node: subject.isNode)
                 }
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                LazyVGrid(columns: Self.chartColumns, spacing: 12) {
                     ForEach(MetricChartSpec.charts(node: subject.isNode, live: timeframe == .live)) { spec in
                         MetricChartView(spec: spec, samples: samples, timeframe: timeframe, hover: $hover)
                     }
@@ -128,8 +149,8 @@ struct MetricsPanel: View {
         .task(id: PollKey(timeframe: timeframe, interval: interval, serverRefresh: server.lastRefresh)) {
             var first = true
             while !Task.isCancelled {
-                if first || AppVisibility.isVisible {
-                    await metrics.update(model.proxmox, timeframe: timeframe)
+                if first || isVisible() {
+                    await metrics.update(runtime, timeframe: timeframe)
                 }
                 first = false
                 guard interval > 0 else { return }
@@ -137,19 +158,36 @@ struct MetricsPanel: View {
             }
         }
     }
+
+    /// Two graphs side by side on the Mac; on iOS as many as fit, one on an iPhone.
+    private static var chartColumns: [GridItem] {
+        #if os(macOS)
+        [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+        #else
+        [GridItem(.adaptive(minimum: 320), spacing: 12)]
+        #endif
+    }
 }
 
 /// A clearly visible note that live values can't be updated, why, and since when the shown
 /// values are old, with the way out: logging in again or trying again.
-struct LiveDataNotice: View {
+public struct LiveDataNotice: View {
     let problem: LiveDataProblem
     let lastSuccess: Date?
-    /// The server is logging in (waiting for Touch ID or the password).
+    /// The server is logging in (waiting for Touch ID / Face ID or the password).
     let isLoggingIn: Bool
     let logIn: () -> Void
     let retry: () -> Void
 
-    var body: some View {
+    public init(problem: LiveDataProblem, lastSuccess: Date?, isLoggingIn: Bool, logIn: @escaping () -> Void, retry: @escaping () -> Void) {
+        self.problem = problem
+        self.lastSuccess = lastSuccess
+        self.isLoggingIn = isLoggingIn
+        self.logIn = logIn
+        self.retry = retry
+    }
+
+    public var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: problem == .notLoggedIn ? "lock.fill" : "exclamationmark.triangle.fill")
                 .font(.title2)
@@ -189,9 +227,17 @@ struct LiveDataNotice: View {
         } ?? String(localized: "No values could be loaded yet.")
         switch problem {
         case .notLoggedIn where isLoggingIn:
+            #if os(macOS)
             return String(localized: "Confirm with Touch ID or enter the password.")
+            #else
+            return String(localized: "Confirm with Face ID or enter the password.")
+            #endif
         case .notLoggedIn:
+            #if os(macOS)
             return String(localized: "A Proxmox login expires after two hours without use, for example while the Mac sleeps.") + " " + age
+            #else
+            return String(localized: "A Proxmox login expires after two hours without use.") + " " + age
+            #endif
         case .failed(let message):
             return message + " " + age
         }
@@ -199,11 +245,16 @@ struct LiveDataNotice: View {
 }
 
 /// "↻ 10 s": how often live values are updated, plus updating right away.
-struct RefreshIntervalMenu: View {
+public struct RefreshIntervalMenu: View {
     @Binding var interval: Double
     let refreshNow: () -> Void
 
-    var body: some View {
+    public init(interval: Binding<Double>, refreshNow: @escaping () -> Void) {
+        _interval = interval
+        self.refreshNow = refreshNow
+    }
+
+    public var body: some View {
         Menu {
             Picker("Update live values", selection: $interval) {
                 ForEach(RefreshInterval.choices, id: \.self) { Text(RefreshInterval.label($0)).tag($0) }
@@ -224,30 +275,38 @@ private struct StatTiles: View {
     let node: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            StatTile(title: "CPU",
-                     value: status.cpu.map(MetricUnit.percent.format) ?? "—",
-                     detail: status.cpus.map { String(localized: "of \($0) CPUs") })
-            StatTile(title: "Memory",
-                     value: status.memUsed.map(MetricUnit.bytes.format) ?? "—",
-                     detail: status.memTotal.map { String(localized: "of \(MetricUnit.bytes.format($0))") })
-            if node {
-                StatTile(title: "Load",
-                         value: status.load.map { $0.formatted(.number.precision(.fractionLength(2))) }
-                            .joined(separator: " · ").ifEmpty("—"),
-                         detail: String(localized: "1, 5 and 15 minutes"))
-                StatTile(title: "Root disk", value: share(status.diskUsed, of: status.diskTotal),
-                         detail: usedOfTotal(status.diskUsed, status.diskTotal))
-            } else if let used = status.diskUsed, let total = status.diskTotal {
-                StatTile(title: "Disk", value: share(used, of: total), detail: usedOfTotal(used, total))
-            } else {
-                StatTile(title: "Disk", value: status.diskTotal.map(MetricsFormat.diskSize) ?? "—",
-                         detail: String(localized: "size"))
-            }
-            StatTile(title: "Uptime",
-                     value: status.running ? status.uptime.map(MetricsFormat.uptime) ?? "—" : String(localized: "Stopped"),
-                     detail: nil)
+        #if os(macOS)
+        HStack(spacing: 10) { tiles }
+        #else
+        // Two in a row on an iPhone.
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) { tiles }
+        #endif
+    }
+
+    @ViewBuilder
+    private var tiles: some View {
+        StatTile(title: "CPU",
+                 value: status.cpu.map(MetricUnit.percent.format) ?? "—",
+                 detail: status.cpus.map { String(localized: "of \($0) CPUs") })
+        StatTile(title: "Memory",
+                 value: status.memUsed.map(MetricUnit.bytes.format) ?? "—",
+                 detail: status.memTotal.map { String(localized: "of \(MetricUnit.bytes.format($0))") })
+        if node {
+            StatTile(title: "Load",
+                     value: status.load.map { $0.formatted(.number.precision(.fractionLength(2))) }
+                        .joined(separator: " · ").ifEmpty("—"),
+                     detail: String(localized: "1, 5 and 15 minutes"))
+            StatTile(title: "Root disk", value: share(status.diskUsed, of: status.diskTotal),
+                     detail: usedOfTotal(status.diskUsed, status.diskTotal))
+        } else if let used = status.diskUsed, let total = status.diskTotal {
+            StatTile(title: "Disk", value: share(used, of: total), detail: usedOfTotal(used, total))
+        } else {
+            StatTile(title: "Disk", value: status.diskTotal.map(MetricsFormat.diskSize) ?? "—",
+                     detail: String(localized: "size"))
         }
+        StatTile(title: "Uptime",
+                 value: status.running ? status.uptime.map(MetricsFormat.uptime) ?? "—" : String(localized: "Stopped"),
+                 detail: nil)
     }
 
     private func share(_ used: Double?, of total: Double?) -> String {
@@ -353,7 +412,8 @@ private struct MetricChartView: View {
                     AxisValueLabel(format: timeframe.axisFormat)
                 }
             }
-            .chartXSelection(value: DebugSnapshot.isActive ? .constant(nil) : $hover)
+            // On iOS: touch and drag across a graph to read its values.
+            .chartXSelection(value: isTakingSnapshots ? .constant(nil) : $hover)
             .frame(height: 110)
             .overlay {
                 if points.isEmpty { Text("No data").font(.caption).foregroundStyle(.secondary) }
@@ -403,10 +463,14 @@ private struct StorageList: View {
 }
 
 /// A thin bar for a share between 0 and 1; orange from 90 %.
-struct UsageBar: View {
+public struct UsageBar: View {
     let fraction: Double
 
-    var body: some View {
+    public init(fraction: Double) {
+        self.fraction = fraction
+    }
+
+    public var body: some View {
         GeometryReader { geometry in
             let clamped = min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
@@ -422,13 +486,19 @@ struct UsageBar: View {
 }
 
 /// A usage bar with its value, for the guest table; empty while the guest is stopped.
-struct UsageCell: View {
+public struct UsageCell: View {
     let fraction: Double?
     let text: String?
     /// Old values that can't be updated right now are dimmed.
     var stale = false
 
-    var body: some View {
+    public init(fraction: Double?, text: String?, stale: Bool = false) {
+        self.fraction = fraction
+        self.text = text
+        self.stale = stale
+    }
+
+    public var body: some View {
         if let fraction, let text {
             HStack(spacing: 6) {
                 UsageBar(fraction: fraction).frame(width: 44)
@@ -448,4 +518,8 @@ extension MetricsTimeframe {
         case .week, .month, .year: return .dateTime.day().month(.abbreviated).hour().minute()
         }
     }
+}
+
+private extension String {
+    func ifEmpty(_ fallback: String) -> String { isEmpty ? fallback : self }
 }

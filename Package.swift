@@ -7,6 +7,7 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "HoatzinCore", targets: ["HoatzinCore"]),
+        .library(name: "HoatzinUI", targets: ["HoatzinUI"]),
         .executable(name: "Hoatzin", targets: ["Hoatzin"]),
         .executable(name: "hoatzin-askpass", targets: ["hoatzin-askpass"]),
         .executable(name: "hoatzin-mcp", targets: ["hoatzin-mcp"]),
@@ -20,9 +21,15 @@ let package = Package(
             name: "HoatzinCore",
             path: "Sources/HoatzinCore"
         ),
+        // SwiftUI views both apps show the same way (the graphs of Proxmox nodes and guests).
+        .target(
+            name: "HoatzinUI",
+            dependencies: ["HoatzinCore"],
+            path: "Sources/HoatzinUI"
+        ),
         .executableTarget(
             name: "Hoatzin",
-            dependencies: ["HoatzinCore", .product(name: "SwiftTerm", package: "SwiftTerm")],
+            dependencies: ["HoatzinCore", "HoatzinUI", .product(name: "SwiftTerm", package: "SwiftTerm")],
             path: "Sources/Hoatzin"
         ),
         .executableTarget(

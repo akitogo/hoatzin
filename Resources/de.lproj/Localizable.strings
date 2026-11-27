@@ -457,3 +457,8 @@
 "of %@" = "von %@";
 "%@ of %@" = "%1$@ von %2$@";
 "Try Again" = "Erneut versuchen";
+
+/* Favourites */
+"Favorites" = "Favoriten";
+"Add to Favorites" = "Zu Favoriten hinzufügen";
+"Remove from Favorites" = "Aus Favoriten entfernen";

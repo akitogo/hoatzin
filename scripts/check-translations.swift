@@ -19,8 +19,8 @@ let arguments = CommandLine.arguments
 guard arguments.count == 4 else { die("usage: check-translations.swift <stringsdata dir> <extract.actionsdata> <Resources dir>") }
 let (stringsDir, metadataPath, resources) = (arguments[1], arguments[2], arguments[3])
 let sourceRoot = FileManager.default.currentDirectoryPath + "/Sources/"
-/// The app and its shared core (HoatzinCore); not the helpers, which show no texts.
-let checkedTargets = ["Hoatzin/", "HoatzinCore/"]
+/// The app and the shared code (HoatzinCore, HoatzinUI); not the helpers, which show no texts.
+let checkedTargets = ["Hoatzin/", "HoatzinCore/", "HoatzinUI/"]
 
 /// Keys of the app, with where they come from.
 var keys: [String: String] = [:]

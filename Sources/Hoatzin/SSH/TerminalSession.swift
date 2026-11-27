@@ -68,7 +68,8 @@ final class TerminalSession: Identifiable {
     /// The terminal inside a small margin, like other terminal apps.
     @ObservationIgnored private(set) lazy var containerView: NSView = makeContainer()
 
-    static let background = NSColor(calibratedRed: 0.11, green: 0.12, blue: 0.14, alpha: 1)
+    static let background = NSColor(calibratedRed: TerminalTheme.background.red, green: TerminalTheme.background.green,
+                                    blue: TerminalTheme.background.blue, alpha: 1)
 
     init(target: SSHTarget, preResolved: ResolvedCredential?, broker: CredentialBroker, prompts: PromptCenter) {
         self.target = target
@@ -221,7 +222,7 @@ final class TerminalSession: Identifiable {
         let size = UserDefaults.standard.double(forKey: Prefs.terminalFontSize)
         view.font = NSFont.monospacedSystemFont(ofSize: CGFloat(size > 0 ? size : 13), weight: .regular)
         view.nativeBackgroundColor = Self.background
-        view.nativeForegroundColor = NSColor(calibratedWhite: 0.9, alpha: 1)
+        view.nativeForegroundColor = NSColor(calibratedWhite: TerminalTheme.foregroundWhite, alpha: 1)
         view.caretColor = .systemTeal
         view.optionAsMetaKey = false
         let bridge = Bridge(owner: self)

@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-public enum GuestType: String, Hashable {
+public enum GuestType: String, Codable, Hashable, Sendable {
     case qemu, lxc
 
     public var label: String { self == .qemu ? "VM" : "CT" }
@@ -359,6 +359,7 @@ public final class ProxmoxRuntime {
         states[serverID]?.lastRefresh = Date()
         states[serverID]?.usageProblem = nil
         states[serverID]?.usageUpdated = Date()
+        library.updateFavoriteGuests(server: serverID, from: guests)
 
         // Discover addresses (guest agent / LXC interfaces / static config) in the background.
         let targets = guests.filter { !$0.isTemplate }
